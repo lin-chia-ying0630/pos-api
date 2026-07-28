@@ -5,7 +5,7 @@ import com.alin.lin.dto.MainAmountChangeDto;
 import com.alin.lin.dto.MainAmountChangeRequest;
 import com.alin.lin.dto.RideAmountChangeRequest;
 import com.alin.lin.dto.RiderAmountChangeListRequest;
-import com.alin.lin.entity.MainPolicyRide;
+import com.alin.lin.entity.PolicyCoverage;
 import com.alin.lin.enums.PolicyRideKey;
 import com.alin.lin.enums.RideChangeField;
 import com.alin.lin.service.AmountChangeSaveService;
@@ -34,7 +34,7 @@ import static com.alin.lin.util.PolicyChangeFieldUtil.requireText;
 
 @Service
 public class AmountChangeSaveServiceImpl implements AmountChangeSaveService {
-    private static final String RIDE_CHANGE_FILE = "main_policy_ride";
+    private static final String RIDE_CHANGE_FILE = "policy_coverage";
 
     private final PolicyChangeDao policyChangeDao;
     private final PolicyChangeSupportService policyChangeSupportService;
@@ -60,52 +60,53 @@ public class AmountChangeSaveServiceImpl implements AmountChangeSaveService {
         requireText(changeCaseNo, "changeCaseNo");
         requireNotNull(request.getInsuredAmount(), "insuredAmount");
 
-        String changeItem = codeDescriptionService.mainAmountChangeItemCode();
+        String changeItemCode = codeDescriptionService.mainAmountChangeItemCode();
         policyChangeSupportService.validateChangeCaseAccess(
-                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItem
+                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItemCode
         );
-        policyChangeDao.deleteChangeFieldsByItem(request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItem);
+        policyChangeDao.deleteChangeFieldsByItem(request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItemCode);
         policyChangeDao.deleteChangeFileByItemAndKey(
                 request.getPolicyNo(),
                 request.getPolicySeq(),
                 changeCaseNo,
-                changeItem,
+                changeItemCode,
                 RIDE_CHANGE_FILE,
-                PolicyRideKey.MAIN.getRideOrder()
+                PolicyRideKey.MAIN.getCoverageItemSeq()
         );
-        MainPolicyRide mainRide = policyChangeSupportService.requireMainRide(request.getPolicyNo(), request.getPolicySeq());
+        PolicyCoverage mainRide = policyChangeSupportService.requireMainRide(request.getPolicyNo(), request.getPolicySeq());
         if (amountEquals(mainRide.getInsuredAmount(), request.getInsuredAmount())) {
             policyChangeSupportService.removeEmptyChangeItemAndAcceptance(
-                    request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItem
+                    request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItemCode
             );
-            return result(changeCaseNo, changeItem, 0);
+            return result(changeCaseNo, changeItemCode, 0);
         }
 
         FieldChange fieldChange = new FieldChange(
-                RideChangeField.INSURED_AMOUNT.fieldName(PolicyRideKey.MAIN.getRideOrder()),
-                PolicyRideKey.MAIN.getRideOrder(),
+                RideChangeField.INSURED_AMOUNT.fieldName(PolicyRideKey.MAIN.getCoverageItemSeq()),
+                PolicyRideKey.MAIN.getCoverageItemSeq(),
                 amountToString(mainRide.getInsuredAmount()),
                 amountToString(request.getInsuredAmount())
         );
 
         policyChangeSupportService.ensureChangeCaseSaved(
-                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItem
+                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItemCode
         );
         policyChangeSupportService.upsertFieldChange(
-                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItem, fieldChange
+                request.getPolicyNo(), request.getPolicySeq(), changeCaseNo, changeItemCode, fieldChange
         );
         policyChangeDao.upsertChangeFile(
+                com.alin.lin.util.UuidV7.next(),
                 request.getPolicyNo(),
                 request.getPolicySeq(),
                 changeCaseNo,
-                changeItem,
+                changeItemCode,
                 RIDE_CHANGE_FILE,
-                PolicyRideKey.MAIN.getRideOrder(),
+                PolicyRideKey.MAIN.getCoverageItemSeq(),
                 toJson(rideSnapshot(mainRide, mainRide.getInsuredAmount())),
                 toJson(rideSnapshot(mainRide, request.getInsuredAmount()))
         );
         // 002 只異動主附約檔的主約列，對使用者回傳一筆業務異動。
-        return result(changeCaseNo, changeItem, 1);
+        return result(changeCaseNo, changeItemCode, 1);
     }
 
     @Override
@@ -120,67 +121,67 @@ public class AmountChangeSaveServiceImpl implements AmountChangeSaveService {
         requireText(changeCaseNo, "changeCaseNo");
         requireNotEmpty(request.getRides(), "rides");
 
-        List<MainPolicyRide> rides = policyChangeDao.findRides(policyNo, policySeq);
-        Map<String, MainPolicyRide> rideMap = new LinkedHashMap<>();
-        rides.forEach(ride -> rideMap.put(ride.getRideOrder(), ride));
+        List<PolicyCoverage> rides = policyChangeDao.findRides(policyNo, policySeq);
+        Map<String, PolicyCoverage> rideMap = new LinkedHashMap<>();
+        rides.forEach(ride -> rideMap.put(ride.getCoverageItemSeq(), ride));
 
         List<FieldChange> fieldChanges = new ArrayList<>();
         Set<String> requestedRideOrders = new HashSet<>();
         for (RideAmountChangeRequest changedRide : request.getRides()) {
-            requireText(changedRide.getRideOrder(), "rideOrder");
+            requireText(changedRide.getCoverageItemSeq(), "coverageItemSeq");
             requireNotNull(changedRide.getInsuredAmount(), "ride insuredAmount");
-            if (!requestedRideOrders.add(changedRide.getRideOrder())) {
-                throw new IllegalArgumentException("附約序號不可重複: " + changedRide.getRideOrder());
+            if (!requestedRideOrders.add(changedRide.getCoverageItemSeq())) {
+                throw new IllegalArgumentException("附約序號不可重複: " + changedRide.getCoverageItemSeq());
             }
-            MainPolicyRide beforeRide = rideMap.get(changedRide.getRideOrder());
+            PolicyCoverage beforeRide = rideMap.get(changedRide.getCoverageItemSeq());
             if (beforeRide == null) {
-                throw new NoSuchElementException("找不到附約: " + changedRide.getRideOrder());
+                throw new NoSuchElementException("找不到附約: " + changedRide.getCoverageItemSeq());
             }
-            if (codeDescriptionService.mainRideTypeCode().equals(beforeRide.getRideType())) {
+            if (codeDescriptionService.mainRideTypeCode().equals(beforeRide.getCoverageItemType())) {
                 throw new IllegalArgumentException("003 附約保額變更不可修改主約");
             }
             addAmountChangeIfDifferent(
                     fieldChanges,
-                    RideChangeField.INSURED_AMOUNT.fieldName(changedRide.getRideOrder()),
-                    changedRide.getRideOrder(),
+                    RideChangeField.INSURED_AMOUNT.fieldName(changedRide.getCoverageItemSeq()),
+                    changedRide.getCoverageItemSeq(),
                     beforeRide.getInsuredAmount(),
                     changedRide.getInsuredAmount()
             );
         }
 
-        String changeItem = codeDescriptionService.riderAmountChangeItemCode();
-        policyChangeSupportService.validateChangeCaseAccess(policyNo, policySeq, changeCaseNo, changeItem);
-        policyChangeDao.deleteChangeFieldsByItem(policyNo, policySeq, changeCaseNo, changeItem);
+        String changeItemCode = codeDescriptionService.riderAmountChangeItemCode();
+        policyChangeSupportService.validateChangeCaseAccess(policyNo, policySeq, changeCaseNo, changeItemCode);
+        policyChangeDao.deleteChangeFieldsByItem(policyNo, policySeq, changeCaseNo, changeItemCode);
         if (fieldChanges.isEmpty()) {
-            policyChangeSupportService.removeEmptyChangeItemAndAcceptance(policyNo, policySeq, changeCaseNo, changeItem);
-            return result(changeCaseNo, changeItem, 0);
+            policyChangeSupportService.removeEmptyChangeItemAndAcceptance(policyNo, policySeq, changeCaseNo, changeItemCode);
+            return result(changeCaseNo, changeItemCode, 0);
         }
 
-        policyChangeSupportService.ensureChangeCaseSaved(policyNo, policySeq, changeCaseNo, changeItem);
+        policyChangeSupportService.ensureChangeCaseSaved(policyNo, policySeq, changeCaseNo, changeItemCode);
         fieldChanges.forEach(fieldChange -> policyChangeSupportService.upsertFieldChange(
-                policyNo, policySeq, changeCaseNo, changeItem, fieldChange
+                policyNo, policySeq, changeCaseNo, changeItemCode, fieldChange
         ));
-        return result(changeCaseNo, changeItem, fieldChanges.size());
+        return result(changeCaseNo, changeItemCode, fieldChanges.size());
     }
 
-    private MainAmountChangeDto result(String changeCaseNo, String changeItem, int changedFieldCount) {
+    private MainAmountChangeDto result(String changeCaseNo, String changeItemCode, int changedFieldCount) {
         return MainAmountChangeDto.builder()
                 .changeCaseNo(changeCaseNo)
-                .changeItem(changeItem)
+                .changeItemCode(changeItemCode)
                 .changedFieldCount(changedFieldCount)
                 .build();
     }
 
-    private Map<String, Object> rideSnapshot(MainPolicyRide ride, java.math.BigDecimal insuredAmount) {
+    private Map<String, Object> rideSnapshot(PolicyCoverage ride, java.math.BigDecimal insuredAmount) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("policyNo", ride.getPolicyNo());
         snapshot.put("policySeq", ride.getPolicySeq());
-        snapshot.put("rideType", ride.getRideType());
-        snapshot.put("rideOrder", ride.getRideOrder());
+        snapshot.put("coverageItemType", ride.getCoverageItemType());
+        snapshot.put("coverageItemSeq", ride.getCoverageItemSeq());
         snapshot.put("productCode", ride.getProductCode());
-        snapshot.put("policyYears", ride.getPolicyYears());
+        snapshot.put("coverageTermYears", ride.getCoverageTermYears());
         snapshot.put("insuredAmount", insuredAmount);
-        snapshot.put("premium", ride.getPremium());
+        snapshot.put("premiumAmount", ride.getPremiumAmount());
         return snapshot;
     }
 

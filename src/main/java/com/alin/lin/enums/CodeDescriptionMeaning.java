@@ -22,6 +22,12 @@ public enum CodeDescriptionMeaning {
     // 附約保額變更
     RIDER_AMOUNT_CHANGE(CodeTable.CHANGE_ITEM, "003"),
 
+    EMAIL_CHANGE(CodeTable.CHANGE_ITEM, "004"),
+
+    TELEPHONE_CHANGE(CodeTable.CHANGE_ITEM, "005"),
+
+    MOBILE_CHANGE(CodeTable.CHANGE_ITEM, "006"),
+
     // 受理中
     PENDING_STATUS(CodeTable.ACCEPTANCE_STATUS, "P"),
 
@@ -35,7 +41,8 @@ public enum CodeDescriptionMeaning {
     CANCEL_STATUS(CodeTable.ACCEPTANCE_STATUS, "C"),
 
     // 主約
-    MAIN_RIDE_TYPE(CodeTable.RIDE_TYPE, "1");
+    // policy_coverage 已正規化為 BASE/RIDER，不再沿用舊主附約數字碼。
+    MAIN_RIDE_TYPE(CodeTable.RIDE_TYPE, "BASE");
 
     private final CodeTable codeTable;
     private final String codeBefore;

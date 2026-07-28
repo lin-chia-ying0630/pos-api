@@ -1,6 +1,6 @@
 package com.alin.lin.util;
 
-import com.alin.lin.entity.MainPolicyAddress;
+import com.alin.lin.entity.PolicyContact;
 import com.alin.lin.enums.PolicyChangeFieldName;
 import com.alin.lin.enums.PolicyRideKey;
 import com.alin.lin.enums.RideChangeField;
@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PolicyChangeFieldUtilTest {
     @Test
-    void collectAddressFieldChangesTreatsZipCode2WithLeadingZeroAsSame() {
-        MainPolicyAddress beforeAddress = address("01", "100", "01", "臺北市中正區重慶南路一段１00號", "No.1, Sec.100, Chongqing S. Rd.");
-        MainPolicyAddress afterAddress = address("01", "100", "001", "臺北市中正區重慶南路一段１00號", "No.1, Sec.100, Chongqing S. Rd.");
+    void collectAddressFieldChangesUsesCanonicalPostalCode() {
+        PolicyContact beforeAddress = address("01", "100", "001", "臺北市中正區重慶南路一段１00號", "No.1, Sec.100, Chongqing S. Rd.");
+        PolicyContact afterAddress = address("01", "100", "001", "臺北市中正區重慶南路一段１00號", "No.1, Sec.100, Chongqing S. Rd.");
 
         List<FieldChange> changes = PolicyChangeFieldUtil.collectAddressFieldChanges(beforeAddress, afterAddress);
 
@@ -29,8 +29,8 @@ class PolicyChangeFieldUtilTest {
 
     @Test
     void collectAddressFieldChangesIgnoresAddressWhitespaceAndFullWidthAlphaNumericDifferences() {
-        MainPolicyAddress beforeAddress = address("01", "100", "001", "臺北市中正區重慶南路一段１00號", "No.Ａ, Sec.100, Taipei City");
-        MainPolicyAddress afterAddress = address("01", "100", "001", "臺北市 中正區 重慶南路一段100號", "No.A,Sec.100,TaipeiCity");
+        PolicyContact beforeAddress = address("01", "100", "001", "臺北市中正區重慶南路一段１00號", "No.Ａ, Sec.100, Taipei City");
+        PolicyContact afterAddress = address("01", "100", "001", "臺北市 中正區 重慶南路一段100號", "No.A,Sec.100,TaipeiCity");
 
         List<FieldChange> changes = PolicyChangeFieldUtil.collectAddressFieldChanges(beforeAddress, afterAddress);
 
@@ -39,15 +39,14 @@ class PolicyChangeFieldUtilTest {
 
     @Test
     void collectAddressFieldChangesReturnsOnlyActuallyChangedAddressFields() {
-        MainPolicyAddress beforeAddress = address("01", "100", "001", "臺北市中正區重慶南路一段100號", "No.1, Sec.100, Taipei City");
-        MainPolicyAddress afterAddress = address("01", "104", "001", "臺北市中山區南京東路二段100號", "No.100, Sec.2, Taipei City");
+        PolicyContact beforeAddress = address("01", "100", "001", "臺北市中正區重慶南路一段100號", "No.1, Sec.100, Taipei City");
+        PolicyContact afterAddress = address("01", "104", "001", "臺北市中山區南京東路二段100號", "No.100, Sec.2, Taipei City");
 
         List<FieldChange> changes = PolicyChangeFieldUtil.collectAddressFieldChanges(beforeAddress, afterAddress);
 
-        assertEquals(3, changes.size());
-        assertEquals(PolicyChangeFieldName.ZIP_CODE3.getFieldName(), changes.get(0).field());
+        assertEquals(2, changes.size());
+        assertEquals(PolicyChangeFieldName.POSTAL_CODE.getFieldName(), changes.get(0).field());
         assertEquals(PolicyChangeFieldName.FULL_WIDTH_ADDRESS.getFieldName(), changes.get(1).field());
-        assertEquals(PolicyChangeFieldName.HALF_WIDTH_ADDRESS.getFieldName(), changes.get(2).field());
     }
 
     @Test
@@ -61,8 +60,8 @@ class PolicyChangeFieldUtilTest {
 
         PolicyChangeFieldUtil.addAmountChangeIfDifferent(
                 changes,
-                RideChangeField.INSURED_AMOUNT.fieldName(PolicyRideKey.MAIN.getRideOrder()),
-                PolicyRideKey.MAIN.getRideOrder(),
+                RideChangeField.INSURED_AMOUNT.fieldName(PolicyRideKey.MAIN.getCoverageItemSeq()),
+                PolicyRideKey.MAIN.getCoverageItemSeq(),
                 new BigDecimal("1000000.00"),
                 new BigDecimal("1000000")
         );
@@ -71,24 +70,22 @@ class PolicyChangeFieldUtilTest {
     }
 
     @Test
-    void validateAddressPostalCodeFormatAllowsBlankZipCode2() {
-        assertDoesNotThrow(() -> PolicyChangeFieldUtil.validateAddressPostalCodeFormat("104", null));
+    void validateAddressPostalCodeFormatAllowsThreeDigits() {
+        assertDoesNotThrow(() -> PolicyChangeFieldUtil.validateAddressPostalCodeFormat("104"));
     }
 
     @Test
-    void validateAddressPostalCodeFormatRejectsShortZipCode2() {
-        assertThrows(IllegalArgumentException.class, () -> PolicyChangeFieldUtil.validateAddressPostalCodeFormat("104", "01"));
+    void validateAddressPostalCodeFormatRejectsInvalidLength() {
+        assertThrows(IllegalArgumentException.class, () -> PolicyChangeFieldUtil.validateAddressPostalCodeFormat("10401"));
     }
 
-    private MainPolicyAddress address(String addressType, String zipCode3, String zipCode2, String fullWidthAddress, String halfWidthAddress) {
-        return MainPolicyAddress.builder()
+    private PolicyContact address(String addressTypeCode, String zipCode3, String zipCode2, String fullWidthAddress, String halfWidthAddress) {
+        return PolicyContact.builder()
                 .policyNo("P000000001")
                 .policySeq(1)
-                .addressType(addressType)
-                .zipCode3(zipCode3)
-                .zipCode2(zipCode2)
-                .fullWidthAddress(fullWidthAddress)
-                .halfWidthAddress(halfWidthAddress)
+                .addressTypeCode(addressTypeCode)
+                .postalCode(zipCode3 + (zipCode2 == null ? "" : zipCode2))
+                .addressText(fullWidthAddress)
                 .build();
     }
 }

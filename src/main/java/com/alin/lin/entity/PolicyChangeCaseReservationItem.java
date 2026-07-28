@@ -14,5 +14,5 @@ public class PolicyChangeCaseReservationItem {
     private String changeCaseNo;
 
     // 保全變更項目
-    private String changeItem;
+    private String changeItemCode;
 }

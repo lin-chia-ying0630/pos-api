@@ -43,7 +43,9 @@ class PolicyChangeWorkflowIntegrationTest {
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("main")
             .withUsername("pos")
-            .withPassword("pos-test");
+            .withPassword("pos-test")
+            // 稽核表使用資料庫觸發器保護不可竄改；測試容器需允許非 SUPER 帳號建立觸發器。
+            .withCommand("--log-bin-trust-function-creators=ON");
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -62,22 +64,20 @@ class PolicyChangeWorkflowIntegrationTest {
 
     @BeforeEach
     void resetBusinessData() {
+        jdbcTemplate.update("DELETE FROM policy_change_record_snapshot");
         jdbcTemplate.update("DELETE FROM policy_change_field");
-        jdbcTemplate.update("DELETE FROM policy_change_file");
         jdbcTemplate.update("DELETE FROM policy_change_item");
         jdbcTemplate.update("DELETE FROM policy_change_acceptance");
         jdbcTemplate.update("DELETE FROM policy_change_case_reservation_item");
         jdbcTemplate.update("DELETE FROM policy_change_case_reservation");
         jdbcTemplate.update("DELETE FROM policy_change_case_sequence");
         jdbcTemplate.update("""
-                UPDATE main_policy_address
-                SET zip_code3 = '100',
-                    zip_code2 = '001',
-                    full_width_address = '臺北市中正區重慶南路一段１號',
-                    half_width_address = 'No.1, Sec.1, Chongqing S. Rd., Zhongzheng Dist., Taipei City'
+                UPDATE policy_contact_address
+                SET postal_code = '100001',
+                    address_text = '臺北市中正區重慶南路一段１號'
                 WHERE policy_no = 'P000000001'
                   AND policy_seq = 1
-                  AND address_type = '01'
+                  AND address_type_code = '01'
                 """);
     }
 
@@ -119,10 +119,10 @@ class PolicyChangeWorkflowIntegrationTest {
         PolicyChangeCaseDetailDto detail = policyChangeService.findChangeCaseDetail(
                 "P000000001", 1, changeCase.getChangeCaseNo()
         );
-        assertEquals(1, detail.getChangeFields().stream()
-                .filter(field -> "full_width_address".equals(field.getChangeField()))
+        assertEquals(1, detail.getChangedFieldNames().stream()
+                .filter(field -> "full_width_address".equals(field.getChangedFieldName()))
                 .count());
-        assertTrue(detail.getChangeFields().stream()
+        assertTrue(detail.getChangedFieldNames().stream()
                 .anyMatch(field -> "臺北市中正區重慶南路一段３號".equals(field.getContentAfter())));
     }
 
@@ -131,7 +131,7 @@ class PolicyChangeWorkflowIntegrationTest {
         CreateChangeCaseDto changeCase = policyChangeService.createChangeCase(CreateChangeCaseRequest.builder()
                 .policyNo("P000000001")
                 .policySeq(1)
-                .changeItems(List.of("001", "002"))
+                .changeItemCodes(List.of("001", "002"))
                 .build());
 
         saveCommunicationAddress(changeCase.getChangeCaseNo(), "臺北市中正區重慶南路一段２號");
@@ -147,26 +147,26 @@ class PolicyChangeWorkflowIntegrationTest {
         PolicyChangeCaseDetailDto detail = policyChangeService.findChangeCaseDetail(
                 "P000000001", 1, changeCase.getChangeCaseNo()
         );
-        assertEquals(Set.of("001", "002"), detail.getChangeFields().stream()
-                .map(field -> field.getChangeItem())
+        assertEquals(Set.of("001", "002"), detail.getChangedFieldNames().stream()
+                .map(field -> field.getChangeItemCode())
                 .collect(java.util.stream.Collectors.toSet()));
-        assertEquals(1, detail.getChangeFields().stream()
-                .filter(field -> "002".equals(field.getChangeItem()))
+        assertEquals(1, detail.getChangedFieldNames().stream()
+                .filter(field -> "002".equals(field.getChangeItemCode()))
                 .count());
-        assertEquals(Set.of("main_policy_ride.000.insured_amount"),
-                detail.getChangeFields().stream()
-                        .filter(field -> "002".equals(field.getChangeItem()))
-                        .map(field -> field.getChangeField())
+        assertEquals(Set.of("policy_coverage.000.insured_amount"),
+                detail.getChangedFieldNames().stream()
+                        .filter(field -> "002".equals(field.getChangeItemCode()))
+                        .map(field -> field.getChangedFieldName())
                         .collect(java.util.stream.Collectors.toSet()));
-        assertEquals(1, detail.getChangeFiles().stream()
-                .filter(file -> "002".equals(file.getChangeItem()))
+        assertEquals(1, detail.getChangedRecordTypes().stream()
+                .filter(file -> "002".equals(file.getChangeItemCode()))
                 .count());
-        assertTrue(detail.getChangeFiles().stream()
-                .filter(file -> "002".equals(file.getChangeItem()))
+        assertTrue(detail.getChangedRecordTypes().stream()
+                .filter(file -> "002".equals(file.getChangeItemCode()))
                 .flatMap(file -> file.getSnapshotFields().stream())
                 .anyMatch(field -> "insuredAmount".equals(field.getJsonKey())
-                        && "1000000".equals(field.getContentBefore())
-                        && "1100000".equals(field.getContentAfter())));
+                        && amountEquals("1000000", field.getContentBefore())
+                        && amountEquals("1100000", field.getContentAfter())));
         assertEquals(1, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM policy_change_acceptance WHERE change_case_no = ?",
                 Integer.class,
@@ -175,55 +175,46 @@ class PolicyChangeWorkflowIntegrationTest {
     }
 
     @Test
-    void stalePendingCaseCannotOverwriteNewerCompletedCase() {
+    void completedCaseAllowsAFollowingCaseToApplyWithoutOverwritingAuditHistory() {
         CreateChangeCaseDto olderCase = createAddressCase();
         saveCommunicationAddress(olderCase.getChangeCaseNo(), "臺北市中正區重慶南路一段２號");
+        complete(olderCase.getChangeCaseNo());
+
         CreateChangeCaseDto newerCase = createAddressCase();
         saveCommunicationAddress(newerCase.getChangeCaseNo(), "臺北市中正區重慶南路一段３號");
-
         complete(newerCase.getChangeCaseNo());
-        assertThrows(ChangeCaseConflictException.class, () -> complete(olderCase.getChangeCaseNo()));
+
         assertEquals(
                 "臺北市中正區重慶南路一段３號",
                 policyChangeService.findPolicyDetail("P000000001", 1)
                         .getCommunicationAddress()
-                        .getFullWidthAddress()
+                        .getAddressText()
         );
     }
 
     @Test
-    void concurrentReviewsOfSameAddressAllowOnlyOneCaseToComplete() throws Exception {
+    void concurrentApplicationsOfSameAddressAllowOnlyOneCaseToEnterThePendingQueue() throws Exception {
         CreateChangeCaseDto firstCase = createAddressCase();
-        saveCommunicationAddress(firstCase.getChangeCaseNo(), "臺北市中正區重慶南路一段２號");
         CreateChangeCaseDto secondCase = createAddressCase();
-        saveCommunicationAddress(secondCase.getChangeCaseNo(), "臺北市中正區重慶南路一段３號");
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             Future<String> firstResult = executor.submit(
-                    () -> completeAfterSignal(firstCase.getChangeCaseNo(), ready, start)
+                    () -> saveAddressAfterSignal(firstCase.getChangeCaseNo(), "臺北市中正區重慶南路一段２號", ready, start)
             );
             Future<String> secondResult = executor.submit(
-                    () -> completeAfterSignal(secondCase.getChangeCaseNo(), ready, start)
+                    () -> saveAddressAfterSignal(secondCase.getChangeCaseNo(), "臺北市中正區重慶南路一段３號", ready, start)
             );
             ready.await();
             start.countDown();
 
-            assertEquals(Set.of("COMPLETED", "CONFLICT"), Set.of(firstResult.get(), secondResult.get()));
-            String currentAddress = policyChangeService.findPolicyDetail("P000000001", 1)
-                    .getCommunicationAddress()
-                    .getFullWidthAddress();
-            assertTrue(Set.of(
-                    "臺北市中正區重慶南路一段２號",
-                    "臺北市中正區重慶南路一段３號"
-            ).contains(currentAddress));
+            assertEquals(Set.of("PENDING", "CONFLICT"), Set.of(firstResult.get(), secondResult.get()));
 
             List<String> statuses = policyChangeService.findChangeCases("P000000001").stream()
                     .map(changeCase -> changeCase.getAcceptanceStatus())
                     .toList();
-            assertEquals(1, statuses.stream().filter("S"::equals).count());
             assertEquals(1, statuses.stream().filter("P"::equals).count());
         } finally {
             executor.shutdownNow();
@@ -234,7 +225,7 @@ class PolicyChangeWorkflowIntegrationTest {
         return policyChangeService.createChangeCase(CreateChangeCaseRequest.builder()
                 .policyNo("P000000001")
                 .policySeq(1)
-                .changeItems(java.util.List.of("001"))
+                .changeItemCodes(java.util.List.of("001"))
                 .build());
     }
 
@@ -242,12 +233,34 @@ class PolicyChangeWorkflowIntegrationTest {
         return policyChangeService.saveAddressChange(changeCaseNo, AddressChangeRequest.builder()
                 .policyNo("P000000001")
                 .policySeq(1)
-                .addressType("01")
-                .zipCode3("100")
-                .zipCode2("001")
-                .fullWidthAddress(address)
-                .halfWidthAddress("")
+                .addressTypeCode("01")
+                .postalCode("100001")
+                .addressText(address)
                 .build());
+    }
+
+    private String saveAddressAfterSignal(
+            String changeCaseNo,
+            String address,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) {
+        ready.countDown();
+        try {
+            start.await();
+            saveCommunicationAddress(changeCaseNo, address);
+            return "PENDING";
+        } catch (ChangeCaseConflictException exception) {
+            return "CONFLICT";
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private boolean amountEquals(String expected, String actual) {
+        return actual != null
+                && new java.math.BigDecimal(expected).compareTo(new java.math.BigDecimal(actual)) == 0;
     }
 
     private void complete(String changeCaseNo) {

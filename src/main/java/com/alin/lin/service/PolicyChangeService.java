@@ -5,6 +5,7 @@ import com.alin.lin.dto.AddressChangeRequest;
 import com.alin.lin.dto.CreateChangeCaseDto;
 import com.alin.lin.dto.CreateChangeCaseRequest;
 import com.alin.lin.dto.ChangeCaseEligibilityDto;
+import com.alin.lin.dto.ContactChannelChangeRequest;
 import com.alin.lin.dto.MainAmountChangeDto;
 import com.alin.lin.dto.MainAmountChangeRequest;
 import com.alin.lin.dto.PolicyChangeCaseDto;
@@ -22,11 +23,13 @@ public interface PolicyChangeService {
 
     PostalCodeAreaDto findPostalCodeArea(String postalCode);
 
-    ChangeCaseEligibilityDto checkChangeCaseEligibility(String policyNo, Integer policySeq, String changeItem);
+    ChangeCaseEligibilityDto checkChangeCaseEligibility(String policyNo, Integer policySeq, String changeItemCode);
 
     CreateChangeCaseDto createChangeCase(CreateChangeCaseRequest request);
 
     AddressChangeDto saveAddressChange(String changeCaseNo, AddressChangeRequest request);
+
+    AddressChangeDto saveContactChannelChange(String changeCaseNo, String channel, ContactChannelChangeRequest request);
 
     MainAmountChangeDto saveMainAmountChange(String changeCaseNo, MainAmountChangeRequest request);
 

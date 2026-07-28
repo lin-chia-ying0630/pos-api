@@ -17,7 +17,7 @@ public class ChangeCaseEligibilityDto {
     private Integer policySeq;
 
     // 保全變更項目序號
-    private String changeItem;
+    private String changeItemCode;
 
     // 是否可以申請
     private boolean eligible;

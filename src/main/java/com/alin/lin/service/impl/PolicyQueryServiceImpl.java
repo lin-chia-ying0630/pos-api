@@ -6,9 +6,9 @@ import com.alin.lin.dto.PolicyChangeCaseDetailDto;
 import com.alin.lin.dto.PolicyDetailDto;
 import com.alin.lin.dto.PostalCodeAreaDto;
 import com.alin.lin.entity.CodeDescription;
-import com.alin.lin.entity.MainPolicyAddress;
-import com.alin.lin.entity.MainPolicyMaster;
-import com.alin.lin.entity.MainPolicyRide;
+import com.alin.lin.entity.PolicyContact;
+import com.alin.lin.entity.PolicyContract;
+import com.alin.lin.entity.PolicyCoverage;
 import com.alin.lin.entity.PolicyChangeFile;
 import com.alin.lin.entity.PolicyChangeField;
 import com.alin.lin.entity.PolicyChangeSnapshotField;
@@ -54,22 +54,25 @@ public class PolicyQueryServiceImpl implements PolicyQueryService {
 
     @Override
     public PolicyDetailDto findPolicyDetail(String policyNo, Integer policySeq) {
-        MainPolicyMaster master = policyChangeSupportService.requirePolicy(policyNo, policySeq);
-        List<MainPolicyAddress> addressList = policyChangeDao.findAddresses(policyNo, policySeq);
-        List<MainPolicyRide> rideList = policyChangeDao.findRides(policyNo, policySeq);
-        String communicationAddressCode = codeDescriptionService.communicationAddressCode();
-        MainPolicyAddress communicationAddress = addressList.stream()
-                .filter(address -> communicationAddressCode.equals(address.getAddressType()))
-                .findFirst()
+        PolicyContract master = policyChangeSupportService.requirePolicy(policyNo, policySeq);
+        List<PolicyContact> addressList = policyChangeDao.findAddresses(policyNo, policySeq);
+        List<PolicyCoverage> rideList = policyChangeDao.findRides(policyNo, policySeq);
+        // 代碼說明屬於顯示輔助資料；缺少「通訊地址」設定時仍須回傳主檔與地址清單。
+        PolicyContact communicationAddress = codeDescriptionService.findCommunicationAddressCode()
+                .flatMap(code -> addressList.stream()
+                        .filter(address -> code.equals(address.getAddressTypeCode()))
+                        .findFirst())
                 .orElse(null);
         return PolicyDetailDto.builder()
                 .master(master)
                 .communicationAddress(communicationAddress)
                 .addressList(addressList)
+                .emailList(policyChangeDao.findEmails(policyNo, policySeq))
+                .phoneList(policyChangeDao.findPhones(policyNo, policySeq))
                 .rideList(rideList)
-                .addressTypes(codeDescriptionService.findAddressTypes())
+                .addressTypeCodes(codeDescriptionService.findAddressTypes())
                 .acceptanceStatuses(codeDescriptionService.findAcceptanceStatuses())
-                .changeItems(codeDescriptionService.findChangeItems())
+                .changeItemCodes(codeDescriptionService.findChangeItems())
                 .screenPermissions(codeDescriptionService.findScreenPermissions())
                 .build();
     }
@@ -125,26 +128,26 @@ public class PolicyQueryServiceImpl implements PolicyQueryService {
                 && !Objects.equals(currentUserService.username(), changeCase.getCreatedBy())) {
             throw new NoSuchElementException("找不到保全受理資料: " + changeCaseNo);
         }
-        List<PolicyChangeFile> changeFiles = policyChangeDao.findChangeFilesByCaseNo(policyNo, policySeq, changeCaseNo);
+        List<PolicyChangeFile> changedRecordTypes = policyChangeDao.findChangeFilesByCaseNo(policyNo, policySeq, changeCaseNo);
         Map<String, String> chineseNames = codeDescriptionService.findChtFieldNames();
-        changeFiles.forEach(file -> file.setSnapshotFields(buildSnapshotFields(file, chineseNames)));
-        List<PolicyChangeField> changeFields = policyChangeDao.findChangeFieldsByCaseNo(
+        changedRecordTypes.forEach(file -> file.setSnapshotFields(buildSnapshotFields(file, chineseNames)));
+        List<PolicyChangeField> changedFieldNames = policyChangeDao.findChangeFieldsByCaseNo(
                 policyNo, policySeq, changeCaseNo
         );
-        changeFields.forEach(field -> field.setChineseName(resolveChineseFieldName(field.getChangeField(), chineseNames)));
+        changedFieldNames.forEach(field -> field.setChineseName(resolveChineseFieldName(field.getChangedFieldName(), chineseNames)));
         return PolicyChangeCaseDetailDto.builder()
                 .changeCase(changeCase)
-                .changeFields(changeFields)
-                .changeFiles(changeFiles)
+                .changedFieldNames(changedFieldNames)
+                .changedRecordTypes(changedRecordTypes)
                 .build();
     }
 
-    private String resolveChineseFieldName(String changeField, Map<String, String> chineseNames) {
-        String simpleField = changeField == null
+    private String resolveChineseFieldName(String changedFieldName, Map<String, String> chineseNames) {
+        String simpleField = changedFieldName == null
                 ? ""
-                : changeField.substring(changeField.lastIndexOf('.') + 1);
+                : changedFieldName.substring(changedFieldName.lastIndexOf('.') + 1);
         String jsonKey = snakeToCamel(simpleField);
-        return chineseNames.getOrDefault(jsonKey, changeField);
+        return chineseNames.getOrDefault(jsonKey, changedFieldName);
     }
 
     private String snakeToCamel(String value) {

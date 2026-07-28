@@ -31,6 +31,6 @@ public class MainAmountChangeRequest {
     // 變更後主約保額
     @NotNull(message = "insuredAmount 不可空白")
     @DecimalMin(value = "0.00", message = "insuredAmount 不可小於 0")
-    @Digits(integer = 8, fraction = 2, message = "insuredAmount 最多 8 位整數及 2 位小數")
+    @Digits(integer = 16, fraction = 2, message = "insuredAmount 最多 16 位整數及 2 位小數")
     private BigDecimal insuredAmount;
 }

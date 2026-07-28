@@ -18,16 +18,16 @@ public class ResponseUtil {
         return builder(HttpStatus.OK, true, null, "執行成功", " ", " ");
     }
 
-    public static <T> ResponseEntity<ResponseBodyDto<T>> ok(String message, String massageCode) {
-        return builder(HttpStatus.OK, true, null, message, massageCode, " ");
+    public static <T> ResponseEntity<ResponseBodyDto<T>> ok(String message, String messageCode) {
+        return builder(HttpStatus.OK, true, null, message, messageCode, " ");
     }
 
     public static <T> ResponseEntity<ResponseBodyDto<T>> ok(String message, T data) {
         return builder(HttpStatus.OK, true, data, message, "", " ");
     }
 
-    public static <T> ResponseEntity<ResponseBodyDto<T>> ok(String message, String massageCode, T data) {
-        return builder(HttpStatus.OK, true, data, message, massageCode, " ");
+    public static <T> ResponseEntity<ResponseBodyDto<T>> ok(String message, String messageCode, T data) {
+        return builder(HttpStatus.OK, true, data, message, messageCode, " ");
     }
 
     public static <T> ResponseEntity<ResponseBodyDto<T>> ok(T data) {
@@ -75,14 +75,14 @@ public class ResponseUtil {
     }
 
 
-    public static <T> ResponseEntity<ResponseBodyDto<T>> builder(HttpStatus httpStatus, boolean isSuccess, T data, String massage, String massageCode, String errorMassage) {
+    public static <T> ResponseEntity<ResponseBodyDto<T>> builder(HttpStatus httpStatus, boolean isSuccess, T data, String message, String messageCode, String errorMessage) {
 
         return ResponseEntity.status(httpStatus).body(
                 ResponseBodyDto.<T>builder()
                         .success(isSuccess)
-                        .message(massage)
-                        .massageCode(massageCode)
-                        .errorMessage(errorMassage)
+                        .message(message)
+                        .messageCode(messageCode)
+                        .errorMessage(errorMessage)
                         .data(data)
                         .build()
         );

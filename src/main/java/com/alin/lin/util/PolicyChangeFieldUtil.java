@@ -1,8 +1,7 @@
 package com.alin.lin.util;
 
-import com.alin.lin.entity.MainPolicyAddress;
+import com.alin.lin.entity.PolicyContact;
 import com.alin.lin.enums.PolicyChangeFieldName;
-import com.alin.lin.enums.PostalCodeRule;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -38,19 +37,28 @@ public final class PolicyChangeFieldUtil {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    public static void validateAddressPostalCodeFormat(String zipCode3, String zipCode2) {
-        if (!PostalCodeRule.ZIP_CODE3.matches(zipCode3) || (zipCode2 != null && !PostalCodeRule.ZIP_CODE3.matches(zipCode2))) {
-            throw new IllegalArgumentException("郵遞區號前三碼必填，後三碼可空白；若填寫需為 3 碼");
+    public static void validateAddressPostalCodeFormat(String postalCode) {
+        if (postalCode == null || !postalCode.matches("^\\d{3}(?:\\d{3})?$")) {
+            throw new IllegalArgumentException("郵遞區號必須為 3 或 6 碼數字");
         }
     }
 
-    public static List<FieldChange> collectAddressFieldChanges(MainPolicyAddress beforeAddress, MainPolicyAddress afterAddress) {
+    public static List<FieldChange> collectAddressFieldChanges(PolicyContact beforeAddress, PolicyContact afterAddress) {
         List<FieldChange> fieldChanges = new ArrayList<>();
-        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.ZIP_CODE3.getFieldName(), beforeAddress.getAddressType(), beforeAddress.getZipCode3(), afterAddress.getZipCode3());
-        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.ZIP_CODE2.getFieldName(), beforeAddress.getAddressType(), beforeAddress.getZipCode2(), afterAddress.getZipCode2());
-        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.FULL_WIDTH_ADDRESS.getFieldName(), beforeAddress.getAddressType(), beforeAddress.getFullWidthAddress(), afterAddress.getFullWidthAddress());
-        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.HALF_WIDTH_ADDRESS.getFieldName(), beforeAddress.getAddressType(), beforeAddress.getHalfWidthAddress(), afterAddress.getHalfWidthAddress());
+        String key = beforeAddress.getAddressId() == null
+                ? beforeAddress.getAddressTypeCode()
+                : beforeAddress.getAddressId();
+        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.POSTAL_CODE.getFieldName(), key, beforeAddress.getPostalCode(), afterAddress.getPostalCode());
+        addTextChangeIfDifferent(fieldChanges, PolicyChangeFieldName.FULL_WIDTH_ADDRESS.getFieldName(), key, beforeAddress.getAddressText(), afterAddress.getAddressText());
         return fieldChanges;
+    }
+
+    public static String canonicalPostalCode(PolicyContact address) {
+        return normalizeBlank(address.getPostalCode());
+    }
+
+    public static String canonicalAddress(PolicyContact address) {
+        return normalizeBlank(address.getAddressText());
     }
 
     public static void addAmountChangeIfDifferent(List<FieldChange> fieldChanges, String field, String key, BigDecimal beforeValue, BigDecimal afterValue) {

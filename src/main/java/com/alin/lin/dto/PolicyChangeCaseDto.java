@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyChangeCaseDto {
+    private String changeCaseId;
     // 保單號碼
     private String policyNo;
 
@@ -46,8 +47,8 @@ public class PolicyChangeCaseDto {
     private LocalDateTime updatedAt;
 
     // 保全變更項目清單
-    private String changeItems;
+    private String changeItemCodes;
 
     // 保全變更項目說明清單
-    private String changeItemDescriptions;
+    private String changeItemCodeDescriptions;
 }

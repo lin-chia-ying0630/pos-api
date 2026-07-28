@@ -4,6 +4,7 @@ import com.alin.lin.dto.AddressChangeDto;
 import com.alin.lin.dto.AddressChangeRequest;
 import com.alin.lin.dto.CreateChangeCaseDto;
 import com.alin.lin.dto.CreateChangeCaseRequest;
+import com.alin.lin.dto.ContactChannelChangeRequest;
 import com.alin.lin.dto.ChangeCaseEligibilityDto;
 import com.alin.lin.dto.MainAmountChangeDto;
 import com.alin.lin.dto.MainAmountChangeRequest;
@@ -44,7 +45,7 @@ public class PolicyChangeController {
         this.policyChangeService = policyChangeService;
     }
 
-    // 畫面對應：新增保全變更頁載入保單主檔、通訊地址、全部地址清單、主附約資料與變更項目。
+    // 畫面對應：申請保全變更頁載入保單主檔、通訊地址、全部地址清單、主附約資料與變更項目。
     @GetMapping("/policies/{policyNo}/{policySeq}")
     public ResponseEntity<ResponseBodyDto<PolicyDetailDto>> findPolicyDetail(
             @PathVariable @NotBlank(message = "policyNo 不可空白")
@@ -54,7 +55,7 @@ public class PolicyChangeController {
         return ResponseUtil.ok(policyChangeService.findPolicyDetail(policyNo, policySeq));
     }
 
-    // 畫面對應：新增保全變更頁的地址變更 Dialog，輸入 3+3 郵遞區號後帶入地址前綴。
+    // 畫面對應：申請保全變更頁的地址變更 Dialog，輸入 3+3 郵遞區號後帶入地址前綴。
     @GetMapping("/postal-codes/{postalCode}")
     public ResponseEntity<ResponseBodyDto<PostalCodeAreaDto>> findPostalCodeArea(
             @PathVariable
@@ -65,25 +66,25 @@ public class PolicyChangeController {
         return ResponseUtil.ok(policyChangeService.findPostalCodeArea(postalCode));
     }
 
-    // 畫面對應：新增保全變更頁產生案號前，依保單與保全變更項目檢查最近案件是否仍為 P-受理中。
-    @GetMapping("/policies/{policyNo}/{policySeq}/change-items/{changeItem}/eligibility")
+    // 畫面對應：申請保全變更頁產生案號前，依保單與保全變更項目檢查最近案件是否仍為 P-受理中。
+    @GetMapping("/policies/{policyNo}/{policySeq}/change-items/{changeItemCode}/eligibility")
     public ResponseEntity<ResponseBodyDto<ChangeCaseEligibilityDto>> checkChangeCaseEligibility(
             @PathVariable @NotBlank(message = "policyNo 不可空白")
             @Pattern(regexp = com.alin.lin.util.ValidationPatterns.POLICY_NO, message = "policyNo 格式錯誤") String policyNo,
             @PathVariable @NotNull(message = "policySeq 不可空白") @Positive(message = "policySeq 必須大於 0") Integer policySeq,
-            @PathVariable @NotBlank(message = "changeItem 不可空白")
-            @Pattern(regexp = com.alin.lin.util.ValidationPatterns.CHANGE_ITEM, message = "changeItem 格式錯誤") String changeItem
+            @PathVariable @NotBlank(message = "changeItemCode 不可空白")
+            @Pattern(regexp = com.alin.lin.util.ValidationPatterns.CHANGE_ITEM, message = "changeItemCode 格式錯誤") String changeItemCode
     ) {
-        return ResponseUtil.ok(policyChangeService.checkChangeCaseEligibility(policyNo, policySeq, changeItem));
+        return ResponseUtil.ok(policyChangeService.checkChangeCaseEligibility(policyNo, policySeq, changeItemCode));
     }
 
-    // 畫面對應：新增保全變更頁的「產生案號」按鈕，只先取得 P-受理中案號，不立即寫受理檔。
+    // 畫面對應：申請保全變更頁的「產生案號」按鈕，只先取得 P-受理中案號，不立即寫受理檔。
     @PostMapping("/change-cases")
     public ResponseEntity<ResponseBodyDto<CreateChangeCaseDto>> createChangeCase(@Valid @RequestBody CreateChangeCaseRequest request) {
         return ResponseUtil.created(policyChangeService.createChangeCase(request));
     }
 
-    // 畫面對應：新增保全變更頁的 001 地址變更 Dialog 儲存。
+    // 畫面對應：申請保全變更頁的 001 地址變更 Dialog 儲存。
     @PostMapping("/change-cases/{changeCaseNo}/address-change")
     public ResponseEntity<ResponseBodyDto<AddressChangeDto>> saveAddressChange(
             @PathVariable @NotBlank(message = "changeCaseNo 不可空白")
@@ -93,7 +94,19 @@ public class PolicyChangeController {
         return ResponseUtil.ok(policyChangeService.saveAddressChange(changeCaseNo, request));
     }
 
-    // 畫面對應：新增保全變更頁的 002 主約保額變更 Dialog 儲存。
+    // 畫面對應：004～006 電子郵件、市內電話、行動電話變更 Dialog 儲存。
+    @PostMapping("/change-cases/{changeCaseNo}/contact-channels/{channel}")
+    public ResponseEntity<ResponseBodyDto<AddressChangeDto>> saveContactChannelChange(
+            @PathVariable @NotBlank(message = "changeCaseNo 不可空白")
+            @Pattern(regexp = com.alin.lin.util.ValidationPatterns.CHANGE_CASE_NO, message = "changeCaseNo 格式錯誤")
+            String changeCaseNo,
+            @PathVariable @Pattern(regexp = "email|telephone|mobile", message = "channel 格式錯誤") String channel,
+            @Valid @RequestBody ContactChannelChangeRequest request
+    ) {
+        return ResponseUtil.ok(policyChangeService.saveContactChannelChange(changeCaseNo, channel, request));
+    }
+
+    // 畫面對應：申請保全變更頁的 002 主約保額變更 Dialog 儲存。
     @PostMapping("/change-cases/{changeCaseNo}/main-amount-change")
     public ResponseEntity<ResponseBodyDto<MainAmountChangeDto>> saveMainAmountChange(
             @PathVariable @NotBlank(message = "changeCaseNo 不可空白")
@@ -103,7 +116,7 @@ public class PolicyChangeController {
         return ResponseUtil.ok(policyChangeService.saveMainAmountChange(changeCaseNo, request));
     }
 
-    // 畫面對應：新增保全變更頁的 003 附約保額變更 Dialog 儲存。
+    // 畫面對應：申請保全變更頁的 003 附約保額變更 Dialog 儲存。
     @PostMapping("/change-cases/{changeCaseNo}/policies/{policyNo}/{policySeq}/rider-amount-change")
     public ResponseEntity<ResponseBodyDto<MainAmountChangeDto>> saveRiderAmountChange(
             @PathVariable @NotBlank(message = "changeCaseNo 不可空白")

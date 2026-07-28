@@ -2,9 +2,13 @@ package com.alin.lin.dao;
 
 import com.alin.lin.dto.PolicyChangeCaseDto;
 import com.alin.lin.entity.CodeDescription;
-import com.alin.lin.entity.MainPolicyAddress;
-import com.alin.lin.entity.MainPolicyMaster;
-import com.alin.lin.entity.MainPolicyRide;
+import com.alin.lin.entity.ChangeReview;
+import com.alin.lin.entity.ChangeReviewAudit;
+import com.alin.lin.entity.PolicyContact;
+import com.alin.lin.entity.PolicyContract;
+import com.alin.lin.entity.PolicyCoverage;
+import com.alin.lin.entity.PolicyEmail;
+import com.alin.lin.entity.PolicyPhone;
 import com.alin.lin.entity.PolicyChangeAcceptance;
 import com.alin.lin.entity.PolicyChangeCaseReservation;
 import com.alin.lin.entity.PolicyChangeCaseReservationItem;
@@ -22,31 +26,134 @@ import java.util.List;
  */
 @Mapper
 public interface PolicyChangeDao {
-    MainPolicyMaster findMaster(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq);
+    PolicyContract findMaster(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq);
 
-    MainPolicyMaster findMasterForUpdate(@Param("policyNo") String policyNo,
+    PolicyContract findMasterForUpdate(@Param("policyNo") String policyNo,
                                          @Param("policySeq") Integer policySeq);
 
-    MainPolicyAddress findAddress(@Param("policyNo") String policyNo,
+    int insertPolicyMaster(PolicyContract master);
+    int updatePolicyMaster(com.alin.lin.dto.PolicyMasterMaintenanceRequest request);
+    int deletePolicyMaster(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                           @Param("updatedBy") String updatedBy);
+    int updatePolicyMasterReviewDecision(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                                         @Param("status") String status, @Param("reviewedBy") String reviewedBy);
+    int updateCodeReviewDecision(@Param("codeGroup") String codeGroup, @Param("codeField") String codeField,
+                                 @Param("codeBefore") String codeBefore, @Param("status") String status,
+                                 @Param("reviewedBy") String reviewedBy);
+    int insertPolicyAddress(PolicyContact address);
+    int updatePolicyAddress(PolicyContact address);
+    int deletePolicyAddress(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                            @Param("addressTypeCode") String addressTypeCode, @Param("updatedBy") String updatedBy);
+    int updatePolicyAddressReviewDecision(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                                          @Param("addressTypeCode") String addressTypeCode, @Param("status") String status,
+                                          @Param("reviewedBy") String reviewedBy);
+    int insertPolicyRide(PolicyCoverage ride);
+    int updatePolicyRide(PolicyCoverage ride);
+    int deletePolicyRide(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                         @Param("coverageItemSeq") String coverageItemSeq, @Param("updatedBy") String updatedBy);
+    int updatePolicyRideReviewDecision(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                                       @Param("coverageItemSeq") String coverageItemSeq, @Param("status") String status,
+                                       @Param("reviewedBy") String reviewedBy);
+
+    PolicyContact findAddress(@Param("policyNo") String policyNo,
                                   @Param("policySeq") Integer policySeq,
-                                  @Param("addressType") String addressType);
+                                  @Param("addressTypeCode") String addressTypeCode);
 
-    MainPolicyAddress findAddressForUpdate(@Param("policyNo") String policyNo,
+    PolicyContact findAddressForUpdate(@Param("policyNo") String policyNo,
                                            @Param("policySeq") Integer policySeq,
-                                           @Param("addressType") String addressType);
+                                           @Param("addressTypeCode") String addressTypeCode);
 
-    List<MainPolicyAddress> findAddresses(@Param("policyNo") String policyNo,
+    List<PolicyContact> findAddresses(@Param("policyNo") String policyNo,
                                           @Param("policySeq") Integer policySeq);
+    List<PolicyEmail> findEmails(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq);
+    List<PolicyPhone> findPhones(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq);
+    PolicyEmail findEmail(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                          @Param("contactId") String contactId);
+    PolicyPhone findPhone(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                          @Param("contactId") String contactId);
+    int updateEmailValue(@Param("contactId") String contactId, @Param("beforeValue") String beforeValue,
+                         @Param("afterValue") String afterValue);
+    int updatePhoneValue(@Param("contactId") String contactId, @Param("beforeValue") String beforeValue,
+                         @Param("afterValue") String afterValue);
+    int insertEmailValue(@Param("contactId") String contactId, @Param("policyNo") String policyNo,
+                         @Param("policySeq") Integer policySeq, @Param("afterValue") String afterValue);
+    int insertPhoneValue(@Param("contactId") String contactId, @Param("policyNo") String policyNo,
+                         @Param("policySeq") Integer policySeq, @Param("phoneTypeCode") String phoneTypeCode,
+                         @Param("afterValue") String afterValue);
 
-    List<MainPolicyRide> findRides(@Param("policyNo") String policyNo,
+    List<PolicyCoverage> findRides(@Param("policyNo") String policyNo,
                                    @Param("policySeq") Integer policySeq);
+    PolicyCoverage findRide(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                            @Param("coverageItemSeq") String coverageItemSeq);
+    PolicyCoverage findRideForUpdate(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                                     @Param("coverageItemSeq") String coverageItemSeq);
 
-    List<MainPolicyRide> findRidesForUpdate(@Param("policyNo") String policyNo,
+    List<PolicyCoverage> findRidesForUpdate(@Param("policyNo") String policyNo,
                                             @Param("policySeq") Integer policySeq);
 
     List<CodeDescription> findCodes(@Param("codeGroup") String codeGroup, @Param("codeField") String codeField);
 
     List<CodeDescription> findCodesByGroup(@Param("codeGroup") String codeGroup);
+    List<CodeDescription> findUiFieldDefinitions(@Param("codeGroup") String codeGroup);
+    List<CodeDescription> findAllCodes();
+    int insertCode(CodeDescription code);
+    int updateCode(com.alin.lin.dto.CodeDescriptionCreateRequest code);
+    int deleteCode(@Param("codeGroup") String codeGroup, @Param("codeField") String codeField,
+                   @Param("codeBefore") String codeBefore, @Param("updatedBy") String updatedBy);
+    int reviewCode(@Param("codeGroup") String codeGroup, @Param("codeField") String codeField,
+                   @Param("codeBefore") String codeBefore, @Param("reviewedBy") String reviewedBy);
+
+    int insertChangeReview(ChangeReview review);
+    int insertCompletedChangeReview(ChangeReview review);
+    ChangeReview findChangeReviewForUpdate(@Param("reviewKey") String reviewKey);
+    ChangeReview findPendingChangeReviewForUpdate(@Param("functionCode") String functionCode,
+                                                  @Param("uniqueKey") String uniqueKey);
+    int insertChangeReviewAudit(ChangeReviewAudit audit);
+    List<ChangeReviewAudit> findChangeReviewAudits(@Param("reviewKey") String reviewKey);
+    List<ChangeReview> findChangeReviews(@Param("functionCode") String functionCode,
+                                         @Param("key1") String key1,
+                                         @Param("reviewStatus") String reviewStatus,
+                                         @Param("limit") int limit,
+                                         @Param("offset") int offset);
+    long countChangeReviews(@Param("functionCode") String functionCode,
+                            @Param("key1") String key1,
+                            @Param("reviewStatus") String reviewStatus);
+    int updateChangeReviewStatus(@Param("reviewKey") String reviewKey,
+                                 @Param("status") String status,
+                                 @Param("reviewRemark") String reviewRemark,
+                                 @Param("reviewedBy") String reviewedBy);
+
+    int acquirePendingReviewLock(@Param("functionCode") String functionCode,
+                                 @Param("uniqueKey") String uniqueKey,
+                                 @Param("reviewKey") String reviewKey,
+                                 @Param("createdBy") String createdBy);
+    int releasePendingReviewLock(@Param("reviewKey") String reviewKey);
+
+    int applyPolicyContractUpdate(@Param("value") PolicyContract value,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
+    int applyPolicyContractDelete(@Param("policyNo") String policyNo, @Param("policySeq") Integer policySeq,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
+    int applyPolicyContactUpdate(@Param("value") PolicyContact value,
+                                 @Param("expectedVersion") Long expectedVersion,
+                                 @Param("operatorId") String operatorId);
+    int applyPolicyContactDelete(@Param("value") PolicyContact value,
+                                 @Param("expectedVersion") Long expectedVersion,
+                                 @Param("operatorId") String operatorId);
+    int applyPolicyCoverageUpdate(@Param("value") PolicyCoverage value,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
+    int applyPolicyCoverageDelete(@Param("value") PolicyCoverage value,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
+    int applyCodeDefinitionUpdate(@Param("before") CodeDescription before,
+                                  @Param("value") CodeDescription value,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
+    int applyCodeDefinitionDelete(@Param("value") CodeDescription value,
+                                  @Param("expectedVersion") Long expectedVersion,
+                                  @Param("operatorId") String operatorId);
 
     CodeDescription findCode(@Param("codeGroup") String codeGroup,
                              @Param("codeField") String codeField,
@@ -76,7 +183,7 @@ public interface PolicyChangeDao {
     // 依保單與保全變更項目取得最近一筆已受理案件，供申請資格檢核。
     PolicyChangeCaseDto findLatestChangeCaseByItem(@Param("policyNo") String policyNo,
                                                     @Param("policySeq") Integer policySeq,
-                                                    @Param("changeItem") String changeItem);
+                                                    @Param("changeItemCode") String changeItemCode);
 
     PolicyChangeAcceptance findAcceptanceForUpdate(@Param("policyNo") String policyNo,
                                                     @Param("policySeq") Integer policySeq,
@@ -89,12 +196,12 @@ public interface PolicyChangeDao {
     List<PolicyChangeFile> findChangeFilesByItem(@Param("policyNo") String policyNo,
                                                  @Param("policySeq") Integer policySeq,
                                                  @Param("changeCaseNo") String changeCaseNo,
-                                                 @Param("changeItem") String changeItem);
+                                                 @Param("changeItemCode") String changeItemCode);
 
     List<PolicyChangeField> findChangeFieldsByItem(@Param("policyNo") String policyNo,
                                                    @Param("policySeq") Integer policySeq,
                                                    @Param("changeCaseNo") String changeCaseNo,
-                                                   @Param("changeItem") String changeItem);
+                                                   @Param("changeItemCode") String changeItemCode);
 
     List<PolicyChangeFile> findChangeFilesByCaseNo(@Param("policyNo") String policyNo,
                                                    @Param("policySeq") Integer policySeq,
@@ -106,63 +213,65 @@ public interface PolicyChangeDao {
 
     int insertAcceptance(PolicyChangeAcceptance acceptance);
 
-    int insertChangeItem(PolicyChangeItem changeItem);
+    int insertChangeItem(PolicyChangeItem changeItemCode);
 
     int existsChangeItem(@Param("policyNo") String policyNo,
                          @Param("policySeq") Integer policySeq,
                          @Param("changeCaseNo") String changeCaseNo,
-                         @Param("changeItem") String changeItem);
+                         @Param("changeItemCode") String changeItemCode);
 
-    int upsertChangeField(@Param("policyNo") String policyNo,
+    int upsertChangeField(@Param("changeFieldId") String changeFieldId,
+                          @Param("policyNo") String policyNo,
                           @Param("policySeq") Integer policySeq,
                           @Param("changeCaseNo") String changeCaseNo,
-                          @Param("changeItem") String changeItem,
-                          @Param("changeField") String changeField,
-                          @Param("changeKey") String changeKey,
+                          @Param("changeItemCode") String changeItemCode,
+                          @Param("changedFieldName") String changedFieldName,
+                          @Param("changedRecordKey") String changedRecordKey,
                           @Param("contentBefore") String contentBefore,
                           @Param("contentAfter") String contentAfter);
 
-    int upsertChangeFile(@Param("policyNo") String policyNo,
+    int upsertChangeFile(@Param("changeSnapshotId") String changeSnapshotId,
+                         @Param("policyNo") String policyNo,
                          @Param("policySeq") Integer policySeq,
                          @Param("changeCaseNo") String changeCaseNo,
-                         @Param("changeItem") String changeItem,
-                         @Param("changeFile") String changeFile,
-                         @Param("changeKey") String changeKey,
+                         @Param("changeItemCode") String changeItemCode,
+                         @Param("changedRecordType") String changedRecordType,
+                         @Param("changedRecordKey") String changedRecordKey,
                          @Param("contentBefore") String contentBefore,
                          @Param("contentAfter") String contentAfter);
 
     int deleteChangeFieldsByItem(@Param("policyNo") String policyNo,
                                  @Param("policySeq") Integer policySeq,
                                  @Param("changeCaseNo") String changeCaseNo,
-                                 @Param("changeItem") String changeItem);
+                                 @Param("changeItemCode") String changeItemCode);
 
     int deleteChangeFieldsByItemAndKey(@Param("policyNo") String policyNo,
                                        @Param("policySeq") Integer policySeq,
                                        @Param("changeCaseNo") String changeCaseNo,
-                                       @Param("changeItem") String changeItem,
-                                       @Param("changeKey") String changeKey);
+                                       @Param("changeItemCode") String changeItemCode,
+                                       @Param("changedRecordKey") String changedRecordKey);
 
     int deleteChangeFileByItemAndKey(@Param("policyNo") String policyNo,
                                      @Param("policySeq") Integer policySeq,
                                      @Param("changeCaseNo") String changeCaseNo,
-                                     @Param("changeItem") String changeItem,
-                                     @Param("changeFile") String changeFile,
-                                     @Param("changeKey") String changeKey);
+                                     @Param("changeItemCode") String changeItemCode,
+                                     @Param("changedRecordType") String changedRecordType,
+                                     @Param("changedRecordKey") String changedRecordKey);
 
     int countChangeFieldsByItem(@Param("policyNo") String policyNo,
                                 @Param("policySeq") Integer policySeq,
                                 @Param("changeCaseNo") String changeCaseNo,
-                                @Param("changeItem") String changeItem);
+                                @Param("changeItemCode") String changeItemCode);
 
     int countChangeFilesByItem(@Param("policyNo") String policyNo,
                                @Param("policySeq") Integer policySeq,
                                @Param("changeCaseNo") String changeCaseNo,
-                               @Param("changeItem") String changeItem);
+                               @Param("changeItemCode") String changeItemCode);
 
     int deleteChangeItem(@Param("policyNo") String policyNo,
                          @Param("policySeq") Integer policySeq,
                          @Param("changeCaseNo") String changeCaseNo,
-                         @Param("changeItem") String changeItem);
+                         @Param("changeItemCode") String changeItemCode);
 
     int countChangeItemsByCaseNo(@Param("policyNo") String policyNo,
                                  @Param("policySeq") Integer policySeq,
@@ -176,17 +285,17 @@ public interface PolicyChangeDao {
     int updateAcceptanceStatusIfCurrent(@Param("acceptance") PolicyChangeAcceptance acceptance,
                                         @Param("expectedStatus") String expectedStatus);
 
-    int updateAddress(MainPolicyAddress address);
+    int updateAddress(PolicyContact address);
 
     int updateRideAmount(@Param("policyNo") String policyNo,
                          @Param("policySeq") Integer policySeq,
-                         @Param("rideOrder") String rideOrder,
+                         @Param("coverageItemSeq") String coverageItemSeq,
                          @Param("insuredAmount") String insuredAmount);
 
     int updateRidePremium(@Param("policyNo") String policyNo,
                           @Param("policySeq") Integer policySeq,
-                          @Param("rideOrder") String rideOrder,
-                          @Param("premium") String premium);
+                          @Param("coverageItemSeq") String coverageItemSeq,
+                          @Param("premiumAmount") String premiumAmount);
 
     int updateMasterTotalPremiumFromRides(@Param("policyNo") String policyNo,
                                           @Param("policySeq") Integer policySeq);

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alin.lin.dao.UserRoleAuthorizationDao">
+    <select id="findAllUserAccounts" resultType="map">
+        SELECT user_id, enabled, created_by, created_at, updated_by, updated_at
+        FROM user_account
+        ORDER BY user_id
+    </select>
+
+    <select id="findAllRoleAssignments" resultType="map">
+        SELECT user_id, role_code
+        FROM user_role_assignment
+        ORDER BY user_id, role_code
+    </select>
+
+    <select id="countByUserId" resultType="int" parameterType="string">
+        SELECT COUNT(*)
+        FROM user_account
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findEnabledByUserId" resultType="boolean" parameterType="string">
+        SELECT enabled
+        FROM user_account
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="countOtherEnabledAdmins" resultType="int" parameterType="string">
+        SELECT COUNT(DISTINCT account.user_id)
+        FROM user_account account
+        INNER JOIN user_role_assignment role ON role.user_id = account.user_id
+        WHERE account.enabled = TRUE
+          AND role.role_code = 'ROLE_ADMIN'
+          AND account.user_id &lt;&gt; #{userId}
+    </select>
+
+    <insert id="insertUserAccount" parameterType="map">
+        INSERT INTO user_account
+            (user_account_uuid, user_id, password, enabled, created_by, updated_by)
+        VALUES (#{id}, #{userId}, #{password}, #{enabled}, #{createdBy}, #{updatedBy})
+    </insert>
+
+    <insert id="insertUserRoleAssignment" parameterType="map">
+        INSERT INTO user_role_assignment
+            (user_role_assignment_id, user_id, role_code, created_by, updated_by)
+        VALUES (#{id}, #{userId}, #{roleCode}, #{createdBy}, #{updatedBy})
+    </insert>
+
+    <delete id="deleteUserRoleAssignments" parameterType="string">
+        DELETE FROM user_role_assignment WHERE user_id = #{userId}
+    </delete>
+
+    <update id="updateUserAccountEnabled" parameterType="map">
+        UPDATE user_account
+        SET enabled = #{enabled}, updated_by = #{updatedBy}, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <select id="findRoleCodesByUserId" resultType="string" parameterType="string">
+        SELECT role_code
+        FROM user_role_assignment
+        WHERE user_id = #{userId}
+        ORDER BY role_code
+    </select>
+
+    <update id="updateUserAccountPassword" parameterType="map">
+        UPDATE user_account
+        SET password = #{password}, updated_by = #{updatedBy}, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateUserAccountUpdatedBy" parameterType="map">
+        UPDATE user_account
+        SET updated_by = #{updatedBy}, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <select id="existsAdminRoleAssignment" resultType="boolean" parameterType="string">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        FROM user_role_assignment
+        WHERE user_id = #{userId}
+          AND role_code = 'ROLE_ADMIN'
+    </select>
+
+    <select id="findApiFunctionCodes" resultType="map" parameterType="string">
+        SELECT code_field, code_before, code_after
+        FROM code_definition
+        WHERE code_group = 'api-screen-authorization'
+          AND code_field IN (#{httpMethod}, '*')
+          AND active_flag = 'Y'
+          AND review_status = 'S'
+    </select>
+
+    <select id="findLatestReviewStatuses" resultType="map" parameterType="string">
+        SELECT review.unique_key, review.review_status
+        FROM change_review review
+        INNER JOIN (
+            SELECT unique_key, MAX(id) AS latest_id
+            FROM change_review
+            WHERE function_code = #{functionCode}
+            GROUP BY unique_key
+        ) latest ON latest.latest_id = review.id
+    </select>
+
+    <select id="findAllScreenAuthorizationRows" resultType="map">
+        SELECT user_id, function_code, created_by, created_at, updated_by, updated_at
+        FROM user_screen_authorization
+        ORDER BY user_id, function_code
+    </select>
+
+    <select id="findScreenAuthorizationRows" resultType="map" parameterType="string">
+        SELECT user_id, function_code, created_by, created_at, updated_by, updated_at
+        FROM user_screen_authorization
+        WHERE user_id = #{userId}
+        ORDER BY function_code
+    </select>
+
+    <select id="findFunctionCodes" resultType="string" parameterType="string">
+        SELECT function_code
+        FROM user_screen_authorization
+        WHERE user_id = #{userId}
+        ORDER BY function_code
+    </select>
+
+    <select id="findAvailableFunctionCodes" resultType="string">
+        SELECT code_before
+        FROM code_definition
+        WHERE code_group = 'main-screen'
+          AND code_field = 'function_code'
+          AND active_flag = 'Y'
+          AND review_status = 'S'
+        ORDER BY code_before
+    </select>
+
+    <delete id="deleteUserScreenAuthorizations" parameterType="string">
+        DELETE FROM user_screen_authorization WHERE user_id = #{userId}
+    </delete>
+
+    <insert id="insertUserScreenAuthorization" parameterType="map">
+        INSERT INTO user_screen_authorization
+            (user_screen_authorization_id, user_id, function_code, created_by, updated_by)
+        VALUES (#{id}, #{userId}, #{functionCode}, #{createdBy}, #{updatedBy})
+    </insert>
+</mapper>

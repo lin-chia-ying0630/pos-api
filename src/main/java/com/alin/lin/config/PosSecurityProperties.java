@@ -21,4 +21,12 @@ public class PosSecurityProperties {
     // 覆核人員帳號與密碼。
     private String reviewerUsername;
     private String reviewerPassword;
+
+    // 使用者授權維護帳號與密碼。
+    private String userUsername;
+    private String userPassword;
+
+    // 使用者授權覆核帳號與密碼。
+    private String adminUsername;
+    private String adminPassword;
 }

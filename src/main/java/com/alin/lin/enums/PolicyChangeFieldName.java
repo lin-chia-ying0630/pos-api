@@ -4,6 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum PolicyChangeFieldName {
+    // 完整郵遞區號（canonical）
+    POSTAL_CODE("postal_code"),
+
     // 地址郵遞區號前三碼
     ZIP_CODE3("zip_code3"),
 

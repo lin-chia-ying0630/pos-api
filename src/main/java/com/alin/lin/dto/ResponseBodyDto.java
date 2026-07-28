@@ -19,7 +19,7 @@ public class ResponseBodyDto<T> {
 
     // 訊息代碼
     @Builder.Default
-    private String massageCode = "";
+    private String messageCode = "";
 
     // 錯誤訊息
     @Builder.Default

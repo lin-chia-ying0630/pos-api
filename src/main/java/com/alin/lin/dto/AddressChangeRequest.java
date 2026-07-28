@@ -26,23 +26,16 @@ public class AddressChangeRequest {
     private Integer policySeq;
 
     // 地址型態
-    @NotBlank(message = "addressType 不可空白")
-    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.ADDRESS_TYPE, message = "addressType 必須為 2 碼數字")
-    private String addressType;
+    @NotBlank(message = "addressTypeCode 不可空白")
+    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.ADDRESS_TYPE, message = "addressTypeCode 必須為 1 至 8 碼英數字")
+    private String addressTypeCode;
 
-    // 郵遞區號前 3 碼
-    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.ZIP_CODE_PART, message = "zipCode3 必須為 3 碼數字或空白")
-    private String zipCode3;
-
-    // 郵遞區號後 3 碼
-    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.ZIP_CODE_PART, message = "zipCode2 必須為 3 碼數字或空白")
-    private String zipCode2;
+    // 完整郵遞區號。
+    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.POSTAL_CODE, message = "postalCode 必須為 3 或 6 碼數字")
+    private String postalCode;
 
     // 地址
-    @Size(max = 255, message = "fullWidthAddress 最多 255 個字元")
-    private String fullWidthAddress;
+    @Size(max = 300, message = "addressText 最多 300 個字元")
+    private String addressText;
 
-    // email / 電話 / 手機
-    @Size(max = 255, message = "halfWidthAddress 最多 255 個字元")
-    private String halfWidthAddress;
 }

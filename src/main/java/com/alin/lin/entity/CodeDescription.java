@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CodeDescription {
+    private String codeDefinitionId;
     // 代碼群組
     private String codeGroup;
 
@@ -24,4 +25,14 @@ public class CodeDescription {
 
     // 代碼中文或英文說明
     private String codeDescription;
+    // 是否有效：Y 顯示，N 隱藏
+    private String activeFlag;
+    private String createdBy;
+    private java.time.LocalDateTime createdAt;
+    private String updatedBy;
+    private java.time.LocalDateTime updatedAt;
+    private String reviewStatus;
+    private String reviewedBy;
+    private java.time.LocalDateTime reviewedAt;
+    private Long recordVersion;
 }

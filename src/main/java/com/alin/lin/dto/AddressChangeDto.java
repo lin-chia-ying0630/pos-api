@@ -14,7 +14,7 @@ public class AddressChangeDto {
     private String changeCaseNo;
 
     // 保全變更項目
-    private String changeItem;
+    private String changeItemCode;
 
     // 異動欄位筆數
     private int changedFieldCount;

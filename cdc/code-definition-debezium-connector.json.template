@@ -1,0 +1,22 @@
+{
+  "name": "pos-code-definition-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "database.hostname": "${CDC_DB_HOST}",
+    "database.port": "3306",
+    "database.user": "${CDC_DB_USER}",
+    "database.password": "${CDC_DB_PASSWORD}",
+    "database.server.id": "5401",
+    "topic.prefix": "pos",
+    "database.include.list": "main",
+    "table.include.list": "main.code_definition",
+    "include.schema.changes": "false",
+    "snapshot.mode": "initial",
+    "tombstones.on.delete": "true",
+    "schema.history.internal.kafka.bootstrap.servers": "${CDC_KAFKA_BOOTSTRAP_SERVERS}",
+    "schema.history.internal.kafka.topic": "schema-history.pos-code-definition",
+    "heartbeat.interval.ms": "10000",
+    "errors.tolerance": "none"
+  }
+}

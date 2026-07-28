@@ -60,26 +60,26 @@ public class ChangeCaseDraftServiceImpl implements ChangeCaseDraftService {
     }
 
     @Override
-    public ChangeCaseEligibilityDto checkEligibility(String policyNo, Integer policySeq, String changeItem) {
+    public ChangeCaseEligibilityDto checkEligibility(String policyNo, Integer policySeq, String changeItemCode) {
         policyChangeSupportService.requirePolicy(policyNo, policySeq);
-        requireText(changeItem, "changeItem");
+        requireText(changeItemCode, "changeItemCode");
         PolicyChangeCaseDto latestCase = policyChangeDao.findLatestChangeCaseByItem(
-                policyNo, policySeq, changeItem.trim()
+                policyNo, policySeq, changeItemCode.trim()
         );
         boolean eligible = latestCase == null
                 || !codeDescriptionService.pendingStatusCode().equalsIgnoreCase(latestCase.getAcceptanceStatus());
         log.info(
-                "保全申請資格檢核完成 policyNo={}, policySeq={}, changeItem={}, eligible={}, latestStatus={}",
+                "保全申請資格檢核完成 policyNo={}, policySeq={}, changeItemCode={}, eligible={}, latestStatus={}",
                 maskPolicyNo(policyNo),
                 policySeq,
-                changeItem.trim(),
+                changeItemCode.trim(),
                 eligible,
                 latestCase == null ? "NONE" : latestCase.getAcceptanceStatus()
         );
         return ChangeCaseEligibilityDto.builder()
                 .policyNo(policyNo)
                 .policySeq(policySeq)
-                .changeItem(changeItem.trim())
+                .changeItemCode(changeItemCode.trim())
                 .eligible(eligible)
                 .latestChangeCaseNo(latestCase == null ? null : latestCase.getChangeCaseNo())
                 .latestAcceptanceStatus(latestCase == null ? null : latestCase.getAcceptanceStatus())
@@ -91,27 +91,27 @@ public class ChangeCaseDraftServiceImpl implements ChangeCaseDraftService {
     @Transactional
     public CreateChangeCaseDto createChangeCase(CreateChangeCaseRequest request) {
         policyChangeSupportService.requirePolicy(request.getPolicyNo(), request.getPolicySeq());
-        List<String> changeItems = normalizeChangeItems(request.getChangeItems());
+        List<String> changeItemCodes = normalizeChangeItems(request.getChangeItemCodes());
         Set<String> supportedChangeItems = codeDescriptionService.findChangeItems().stream()
                 .map(code -> code.getCodeBefore())
                 .collect(Collectors.toSet());
-        changeItems.stream()
-                .filter(changeItem -> !supportedChangeItems.contains(changeItem))
+        changeItemCodes.stream()
+                .filter(changeItemCode -> !supportedChangeItems.contains(changeItemCode))
                 .findFirst()
-                .ifPresent(changeItem -> {
-                    throw new IllegalArgumentException("不支援的保全變更項目: " + changeItem);
+                .ifPresent(changeItemCode -> {
+                    throw new IllegalArgumentException("不支援的保全變更項目: " + changeItemCode);
                 });
 
-        changeItems.stream()
-                .map(changeItem -> checkEligibility(request.getPolicyNo(), request.getPolicySeq(), changeItem))
+        changeItemCodes.stream()
+                .map(changeItemCode -> checkEligibility(request.getPolicyNo(), request.getPolicySeq(), changeItemCode))
                 .filter(eligibility -> !eligibility.isEligible())
                 .findFirst()
                 .ifPresent(eligibility -> {
                     log.warn(
-                            "保全申請遭受理中案件阻擋 policyNo={}, policySeq={}, changeItem={}, latestChangeCaseNo={}",
+                            "保全申請遭受理中案件阻擋 policyNo={}, policySeq={}, changeItemCode={}, latestChangeCaseNo={}",
                             maskPolicyNo(request.getPolicyNo()),
                             request.getPolicySeq(),
-                            eligibility.getChangeItem(),
+                            eligibility.getChangeItemCode(),
                             eligibility.getLatestChangeCaseNo()
                     );
                     throw new ChangeCaseConflictException(PENDING_APPLICATION_MESSAGE);
@@ -126,18 +126,18 @@ public class ChangeCaseDraftServiceImpl implements ChangeCaseDraftService {
                 .reservedBy(currentUserService.username())
                 .expiresAt(now.plus(reservationTtl))
                 .build());
-        changeItems.forEach(changeItem -> policyChangeDao.insertCaseReservationItem(
+        changeItemCodes.forEach(changeItemCode -> policyChangeDao.insertCaseReservationItem(
                 PolicyChangeCaseReservationItem.builder()
                         .changeCaseNo(changeCaseNo)
-                        .changeItem(changeItem)
+                        .changeItemCode(changeItemCode)
                         .build()
         ));
         log.info(
-                "保全案號保留成功 policyNo={}, policySeq={}, changeCaseNo={}, changeItems={}",
+                "保全案號保留成功 policyNo={}, policySeq={}, changeCaseNo={}, changeItemCodes={}",
                 maskPolicyNo(request.getPolicyNo()),
                 request.getPolicySeq(),
                 changeCaseNo,
-                changeItems
+                changeItemCodes
         );
 
         return CreateChangeCaseDto.builder()
@@ -145,19 +145,19 @@ public class ChangeCaseDraftServiceImpl implements ChangeCaseDraftService {
                 .policySeq(request.getPolicySeq())
                 .changeCaseNo(changeCaseNo)
                 .acceptanceStatus(codeDescriptionService.pendingStatusCode())
-                .changeItems(changeItems)
+                .changeItemCodes(changeItemCodes)
                 .build();
     }
 
     private List<String> normalizeChangeItems(List<String> requestedChangeItems) {
-        List<String> changeItems = requestedChangeItems.stream()
-                .peek(changeItem -> requireText(changeItem, "changeItem"))
+        List<String> changeItemCodes = requestedChangeItems.stream()
+                .peek(changeItemCode -> requireText(changeItemCode, "changeItemCode"))
                 .map(String::trim)
                 .toList();
-        if (new LinkedHashSet<>(changeItems).size() != changeItems.size()) {
-            throw new IllegalArgumentException("changeItems 不可重複");
+        if (new LinkedHashSet<>(changeItemCodes).size() != changeItemCodes.size()) {
+            throw new IllegalArgumentException("changeItemCodes 不可重複");
         }
-        return List.copyOf(changeItems);
+        return List.copyOf(changeItemCodes);
     }
 
     private String generateChangeCaseNo() {

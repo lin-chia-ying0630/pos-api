@@ -14,7 +14,7 @@ public class MainAmountChangeDto {
     private String changeCaseNo;
 
     // 保全變更項目
-    private String changeItem;
+    private String changeItemCode;
 
     // 異動欄位筆數
     private Integer changedFieldCount;

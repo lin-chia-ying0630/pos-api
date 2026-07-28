@@ -18,8 +18,8 @@ public class PolicyChangeCaseDetailDto {
     private PolicyChangeCaseDto changeCase;
 
     // 待覆核的逐欄位異動前後值。
-    private List<PolicyChangeField> changeFields;
+    private List<PolicyChangeField> changedFieldNames;
 
     // 待覆核的資料列快照異動前後值。
-    private List<PolicyChangeFile> changeFiles;
+    private List<PolicyChangeFile> changedRecordTypes;
 }

@@ -103,7 +103,7 @@ class PolicyChangeSupportServiceImplTest {
         verify(dao).insertChangeItem(itemCaptor.capture());
         verify(dao, never()).insertAcceptance(any());
         verify(dao, never()).consumeCaseReservation(any(), any());
-        assertThat(itemCaptor.getValue().getChangeItem()).isEqualTo("002");
+        assertThat(itemCaptor.getValue().getChangeItemCode()).isEqualTo("002");
     }
 
     private PolicyChangeCaseReservation reservation(String reservedBy, LocalDateTime expiresAt) {

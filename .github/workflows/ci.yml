@@ -17,4 +17,4 @@ jobs:
       - name: Test and package
         run: mvn --batch-mode clean verify
       - name: Build container image
-        run: docker build --tag pos-change-api:ci .
+        run: docker build --tag pos-api:ci .

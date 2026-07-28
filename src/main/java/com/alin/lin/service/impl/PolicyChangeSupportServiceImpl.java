@@ -2,8 +2,8 @@ package com.alin.lin.service.impl;
 
 import com.alin.lin.config.PosChangeProperties;
 import com.alin.lin.dao.PolicyChangeDao;
-import com.alin.lin.entity.MainPolicyMaster;
-import com.alin.lin.entity.MainPolicyRide;
+import com.alin.lin.entity.PolicyContract;
+import com.alin.lin.entity.PolicyCoverage;
 import com.alin.lin.entity.PolicyChangeAcceptance;
 import com.alin.lin.entity.PolicyChangeCaseReservation;
 import com.alin.lin.entity.PolicyChangeItem;
@@ -14,6 +14,7 @@ import com.alin.lin.service.CurrentUserService;
 import com.alin.lin.service.PolicyChangeSupportService;
 import com.alin.lin.util.PolicyChangeFieldUtil.FieldChange;
 import org.springframework.stereotype.Service;
+import com.alin.lin.util.UuidV7;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
@@ -45,10 +46,10 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
     }
 
     @Override
-    public MainPolicyMaster requirePolicy(String policyNo, Integer policySeq) {
+    public PolicyContract requirePolicy(String policyNo, Integer policySeq) {
         requireText(policyNo, "policyNo");
         requireNotNull(policySeq, "policySeq");
-        MainPolicyMaster master = policyChangeDao.findMaster(policyNo, policySeq);
+        PolicyContract master = policyChangeDao.findMaster(policyNo, policySeq);
         if (master == null) {
             throw new NoSuchElementException("找不到保單: " + policyNo + "-" + policySeq);
         }
@@ -56,10 +57,10 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
     }
 
     @Override
-    public MainPolicyRide requireMainRide(String policyNo, Integer policySeq) {
+    public PolicyCoverage requireMainRide(String policyNo, Integer policySeq) {
         return policyChangeDao.findRides(policyNo, policySeq).stream()
-                .filter(ride -> codeDescriptionService.mainRideTypeCode().equals(ride.getRideType())
-                        || PolicyRideKey.MAIN.getRideOrder().equals(ride.getRideOrder()))
+                .filter(ride -> codeDescriptionService.mainRideTypeCode().equals(ride.getCoverageItemType())
+                        || PolicyRideKey.MAIN.getCoverageItemSeq().equals(ride.getCoverageItemSeq()))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("找不到主約資料: " + policyNo + "-" + policySeq));
     }
@@ -69,12 +70,12 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
             String policyNo,
             Integer policySeq,
             String changeCaseNo,
-            String changeItem
+            String changeItemCode
     ) {
         requireText(policyNo, "policyNo");
         requireNotNull(policySeq, "policySeq");
         requireText(changeCaseNo, "changeCaseNo");
-        requireText(changeItem, "changeItem");
+        requireText(changeItemCode, "changeItemCode");
 
         String username = currentUserService.username();
         PolicyChangeAcceptance acceptance = policyChangeDao.findAcceptanceForUpdate(policyNo, policySeq, changeCaseNo);
@@ -84,21 +85,21 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
                 throw new ChangeCaseConflictException("只有 P-受理中的案件可以修改");
             }
             List<String> existingItems = policyChangeDao.findChangeItemsByCaseNo(policyNo, policySeq, changeCaseNo);
-            if (existingItems.contains(changeItem)) {
+            if (existingItems.contains(changeItemCode)) {
                 return;
             }
-            requireReservedChangeItem(policyNo, policySeq, changeCaseNo, changeItem, username, false);
+            requireReservedChangeItem(policyNo, policySeq, changeCaseNo, changeItemCode, username, false);
             return;
         }
 
-        requireReservedChangeItem(policyNo, policySeq, changeCaseNo, changeItem, username, true);
+        requireReservedChangeItem(policyNo, policySeq, changeCaseNo, changeItemCode, username, true);
     }
 
     private PolicyChangeCaseReservation requireReservedChangeItem(
             String policyNo,
             Integer policySeq,
             String changeCaseNo,
-            String changeItem,
+            String changeItemCode,
             String username,
             boolean requireNotExpired
     ) {
@@ -110,8 +111,8 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
                 || !Objects.equals(policySeq, reservation.getPolicySeq())) {
             throw new IllegalArgumentException("案號與保單不符");
         }
-        if (!policyChangeDao.findReservedChangeItems(changeCaseNo).contains(changeItem)) {
-            throw new IllegalArgumentException("此案號未選擇保全變更項目: " + changeItem);
+        if (!policyChangeDao.findReservedChangeItems(changeCaseNo).contains(changeItemCode)) {
+            throw new IllegalArgumentException("此案號未選擇保全變更項目: " + changeItemCode);
         }
         if (requireNotExpired && !reservation.getExpiresAt().isAfter(LocalDateTime.now(changeCaseZoneId))) {
             throw new ChangeCaseConflictException("變更案號已逾期，請重新產生案號");
@@ -123,14 +124,15 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
     }
 
     @Override
-    public void ensureChangeCaseSaved(String policyNo, Integer policySeq, String changeCaseNo, String changeItem) {
-        validateChangeCaseAccess(policyNo, policySeq, changeCaseNo, changeItem);
-        if (policyChangeDao.existsChangeItem(policyNo, policySeq, changeCaseNo, changeItem) > 0) {
+    public void ensureChangeCaseSaved(String policyNo, Integer policySeq, String changeCaseNo, String changeItemCode) {
+        validateChangeCaseAccess(policyNo, policySeq, changeCaseNo, changeItemCode);
+        if (policyChangeDao.existsChangeItem(policyNo, policySeq, changeCaseNo, changeItemCode) > 0) {
             return;
         }
         PolicyChangeAcceptance acceptance = policyChangeDao.findAcceptanceForUpdate(policyNo, policySeq, changeCaseNo);
         if (acceptance == null) {
             policyChangeDao.insertAcceptance(PolicyChangeAcceptance.builder()
+                    .changeCaseId(UuidV7.next())
                     .policyNo(policyNo)
                     .policySeq(policySeq)
                     .changeCaseNo(changeCaseNo)
@@ -145,20 +147,22 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
             }
         }
         policyChangeDao.insertChangeItem(PolicyChangeItem.builder()
+                .changeItemId(UuidV7.next())
                 .policyNo(policyNo)
                 .policySeq(policySeq)
                 .changeCaseNo(changeCaseNo)
-                .changeItem(changeItem)
+                .changeItemCode(changeItemCode)
                 .build());
     }
 
     @Override
-    public void upsertFieldChange(String policyNo, Integer policySeq, String changeCaseNo, String changeItem, FieldChange fieldChange) {
+    public void upsertFieldChange(String policyNo, Integer policySeq, String changeCaseNo, String changeItemCode, FieldChange fieldChange) {
         policyChangeDao.upsertChangeField(
+                UuidV7.next(),
                 policyNo,
                 policySeq,
                 changeCaseNo,
-                changeItem,
+                changeItemCode,
                 fieldChange.field(),
                 fieldChange.key(),
                 fieldChange.beforeValue(),
@@ -167,14 +171,14 @@ public class PolicyChangeSupportServiceImpl implements PolicyChangeSupportServic
     }
 
     @Override
-    public void removeEmptyChangeItemAndAcceptance(String policyNo, Integer policySeq, String changeCaseNo, String changeItem) {
-        int fieldCount = policyChangeDao.countChangeFieldsByItem(policyNo, policySeq, changeCaseNo, changeItem);
-        int fileCount = policyChangeDao.countChangeFilesByItem(policyNo, policySeq, changeCaseNo, changeItem);
+    public void removeEmptyChangeItemAndAcceptance(String policyNo, Integer policySeq, String changeCaseNo, String changeItemCode) {
+        int fieldCount = policyChangeDao.countChangeFieldsByItem(policyNo, policySeq, changeCaseNo, changeItemCode);
+        int fileCount = policyChangeDao.countChangeFilesByItem(policyNo, policySeq, changeCaseNo, changeItemCode);
         if (fieldCount > 0 || fileCount > 0) {
             return;
         }
 
-        policyChangeDao.deleteChangeItem(policyNo, policySeq, changeCaseNo, changeItem);
+        policyChangeDao.deleteChangeItem(policyNo, policySeq, changeCaseNo, changeItemCode);
         if (policyChangeDao.countChangeItemsByCaseNo(policyNo, policySeq, changeCaseNo) == 0) {
             policyChangeDao.deleteAcceptance(
                     policyNo,

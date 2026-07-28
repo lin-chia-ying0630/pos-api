@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alin.lin.dao.UserAccountSecurityDao">
+    <!--
+        Java record 必須依建構子明確映射，避免 MyBatis 將 password 映射成 null，
+        造成 Spring Security 誤判為空密碼並使所有中文標籤 API 回傳 401。
+        此處依 record 建構子順序映射，不使用 name，避免編譯器參數名稱資訊差異。
+    -->
+    <resultMap id="userAccountSecurityRecordMap"
+               type="com.alin.lin.entity.UserAccountSecurityRecord">
+        <constructor>
+            <arg column="user_id" javaType="java.lang.String"/>
+            <arg column="password" javaType="java.lang.String"/>
+            <arg column="enabled" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByUserId" resultMap="userAccountSecurityRecordMap">
+        SELECT user_id,
+               password,
+               enabled
+        FROM user_account
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM user_account
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findRoleCodesByUserId" resultType="string">
+        SELECT role_code
+        FROM user_role_assignment
+        WHERE user_id = #{userId}
+        ORDER BY role_code
+    </select>
+
+    <insert id="insertUser">
+        INSERT INTO user_account (user_account_uuid, user_id, password, enabled)
+        VALUES (UUID(), #{userId}, #{password}, #{enabled})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE user_account
+        SET password = #{password}, enabled = #{enabled}
+        WHERE user_id = #{userId}
+    </update>
+
+    <delete id="deleteUser">
+        DELETE FROM user_account
+        WHERE user_id = #{userId}
+    </delete>
+
+    <update id="changePassword">
+        UPDATE user_account
+        SET password = #{password}
+        WHERE user_id = #{userId}
+    </update>
+
+    <insert id="insertAuthority">
+        INSERT INTO user_role_assignment (user_role_assignment_id, user_id, role_code)
+        VALUES (UUID(), #{userId}, #{roleCode})
+    </insert>
+
+    <delete id="deleteAuthorities">
+        DELETE FROM user_role_assignment
+        WHERE user_id = #{userId}
+    </delete>
+</mapper>

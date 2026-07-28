@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyChangeAcceptance {
+    private String changeCaseId;
+
     // 保單號碼
     private String policyNo;
 

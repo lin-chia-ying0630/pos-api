@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="POS Change API Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+  <configuration default="false" name="POS API Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="ACTIVE_PROFILES" value="local" />
-    <module name="pos-change-api" />
+    <module name="pos-api" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.alin.lin.App" />
     <method v="2">
       <option name="Make" enabled="true" />

@@ -49,12 +49,12 @@ class ChangeCaseDraftServiceImplTest {
         CreateChangeCaseDto result = service.createChangeCase(CreateChangeCaseRequest.builder()
                 .policyNo("P000000001")
                 .policySeq(1)
-                .changeItems(List.of("001", "002"))
+                .changeItemCodes(List.of("001", "002"))
                 .build());
 
         assertTrue(result.getChangeCaseNo().endsWith("1000"));
         assertEquals("P", result.getAcceptanceStatus());
-        assertEquals(List.of("001", "002"), result.getChangeItems());
+        assertEquals(List.of("001", "002"), result.getChangeItemCodes());
         verify(dao).incrementCaseSequence(any(LocalDate.class));
         verify(dao).findLastInsertedSequence();
         verify(dao).insertCaseReservation(any(PolicyChangeCaseReservation.class));
@@ -90,7 +90,7 @@ class ChangeCaseDraftServiceImplTest {
                 () -> service.createChangeCase(CreateChangeCaseRequest.builder()
                         .policyNo("P000000001")
                         .policySeq(1)
-                        .changeItems(List.of("001"))
+                        .changeItemCodes(List.of("001"))
                         .build())
         );
 

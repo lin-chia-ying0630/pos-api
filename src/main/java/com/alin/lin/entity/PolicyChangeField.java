@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyChangeField {
+    private String changeFieldId;
     // 流水識別碼
     private Long id;
 
@@ -25,16 +26,16 @@ public class PolicyChangeField {
     private String changeCaseNo;
 
     // 保全變更項目
-    private String changeItem;
+    private String changeItemCode;
 
     // 異動欄位
-    private String changeField;
+    private String changedFieldName;
 
     // 畫面顯示的中文欄位名稱，由 CodeDescription 補入，不對應資料表欄位。
     private String chineseName;
 
     // 異動目標鍵值
-    private String changeKey;
+    private String changedRecordKey;
 
     // 異動前內容
     private String contentBefore;

@@ -25,5 +25,5 @@ public class CreateChangeCaseDto {
     private String acceptanceStatus;
 
     // 同一案號包含的保全變更項目
-    private List<String> changeItems;
+    private List<String> changeItemCodes;
 }

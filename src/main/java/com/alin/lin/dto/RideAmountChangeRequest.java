@@ -18,13 +18,13 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class RideAmountChangeRequest {
     // 主附約序號
-    @NotBlank(message = "rideOrder 不可空白")
-    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.RIDE_ORDER, message = "rideOrder 必須為 3 碼數字")
-    private String rideOrder;
+    @NotBlank(message = "coverageItemSeq 不可空白")
+    @Pattern(regexp = com.alin.lin.util.ValidationPatterns.RIDE_ORDER, message = "coverageItemSeq 必須為 1 至 10 碼數字")
+    private String coverageItemSeq;
 
     // 變更後保額
     @NotNull(message = "insuredAmount 不可空白")
     @DecimalMin(value = "0.00", message = "insuredAmount 不可小於 0")
-    @Digits(integer = 8, fraction = 2, message = "insuredAmount 最多 8 位整數及 2 位小數")
+    @Digits(integer = 16, fraction = 2, message = "insuredAmount 最多 16 位整數及 2 位小數")
     private BigDecimal insuredAmount;
 }

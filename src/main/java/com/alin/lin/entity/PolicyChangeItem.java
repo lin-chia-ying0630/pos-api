@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyChangeItem {
+    private String changeItemId;
+
     // 保單號碼
     private String policyNo;
 
@@ -22,7 +24,7 @@ public class PolicyChangeItem {
     private String changeCaseNo;
 
     // 保全變更項目
-    private String changeItem;
+    private String changeItemCode;
 
     // 建立時間
     private LocalDateTime createdAt;

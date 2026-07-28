@@ -3,60 +3,240 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.alin.lin.dao.PolicyChangeDao">
-    <select id="findMaster" resultType="com.alin.lin.entity.MainPolicyMaster">
+    <select id="findMaster" resultType="com.alin.lin.entity.PolicyContract">
         SELECT *
-        FROM main_policy_master
+        FROM policy_contract
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
+          AND active_flag = 'Y'
     </select>
 
-    <select id="findMasterForUpdate" resultType="com.alin.lin.entity.MainPolicyMaster">
+    <insert id="insertPolicyMaster" parameterType="com.alin.lin.entity.PolicyContract">
+        INSERT INTO policy_contract
+            (policy_contract_id, policy_no, policy_seq, premium_amount, currency_code, policy_status, contract_date, effective_date,
+             maturity_date, premium_payment_term_years, coverage_term_years, coverage_term_type,
+             payment_frequency_code, product_code, product_version, product_name, base_plan_product_code,
+             application_no, customer_code, insurance_agent_code,
+             active_flag, review_status, created_by, created_at, updated_at, record_version)
+        VALUES
+            (#{policyContractId}, #{policyNo}, #{policySeq}, #{premiumAmount}, #{currencyCode}, #{policyStatus}, #{contractDate},
+             #{effectiveDate}, #{maturityDate}, #{premiumPaymentTermYears}, #{coverageTermYears}, #{coverageTermType},
+             #{paymentFrequencyCode}, #{productCode}, #{productVersion}, #{productName}, #{basePlanProductCode},
+             #{applicationNo}, #{customerCode}, #{insuranceAgentCode},
+             #{activeFlag}, #{reviewStatus}, #{createdBy}, #{createdAt}, #{createdAt}, 0)
+    </insert>
+
+    <insert id="insertCompletedChangeReview" parameterType="com.alin.lin.entity.ChangeReview"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO change_review (
+            review_uuid, operation, workflow_mode, source_type, source_record_type, source_record_id,
+            function_code, key1, unique_key, review_key, policy_no, policy_seq,
+            change_case_no, content_before, content_after, review_status,
+            created_by, created_at, updated_by, updated_at, reviewed_by, reviewed_at
+        ) VALUES (
+            #{reviewUuid}, #{operation}, #{workflowMode}, #{sourceType}, #{sourceRecordType}, #{sourceRecordId},
+            #{functionCode}, #{key1}, #{uniqueKey}, #{reviewKey}, #{policyNo}, #{policySeq},
+            #{changeCaseNo}, #{contentBefore}, #{contentAfter}, 'S',
+            #{createdBy}, CURRENT_TIMESTAMP, #{createdBy}, CURRENT_TIMESTAMP, #{reviewedBy}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updatePolicyMaster" parameterType="com.alin.lin.dto.PolicyMasterMaintenanceRequest">
+        UPDATE policy_contract
+        SET premium_amount=#{premiumAmount}, currency_code=#{currencyCode}, policy_status=#{policyStatus},
+            contract_date=#{contractDate}, effective_date=#{effectiveDate}, maturity_date=#{maturityDate},
+            premium_payment_term_years=#{premiumPaymentTermYears}, coverage_term_years=#{coverageTermYears},
+            coverage_term_type=#{coverageTermType}, payment_frequency_code=#{paymentFrequencyCode},
+            product_code=#{productCode}, product_version=#{productVersion}, product_name=#{productName},
+            base_plan_product_code=#{basePlanProductCode}, application_no=#{applicationNo},
+            customer_code=#{customerCode}, insurance_agent_code=#{insuranceAgentCode},
+            active_flag = COALESCE(#{activeFlag}, active_flag),
+            review_status = #{reviewStatus}, created_by = #{createdBy}, created_at = #{createdAt},
+            updated_by = #{updatedBy}, updated_at = #{updatedAt}, reviewed_by = #{reviewedBy}, reviewed_at = #{reviewedAt}
+        WHERE policy_no = #{originalPolicyNo} AND policy_seq = #{originalPolicySeq} AND active_flag = 'Y'
+    </update>
+
+    <update id="deletePolicyMaster">
+        UPDATE policy_contract
+        SET active_flag = 'N', review_status = 'P', updated_by = #{updatedBy}, updated_at = CURRENT_TIMESTAMP
+        WHERE policy_no = #{policyNo} AND policy_seq = #{policySeq} AND active_flag = 'Y'
+    </update>
+
+    <update id="updatePolicyMasterReviewDecision">
+        UPDATE policy_contract
+        SET review_status = #{status}, reviewed_by = #{reviewedBy}, reviewed_at = CURRENT_TIMESTAMP
+        WHERE policy_no = #{policyNo} AND policy_seq = #{policySeq}
+    </update>
+
+    <update id="updateCodeReviewDecision">
+        UPDATE code_definition
+        SET review_status = #{status}, reviewed_by = #{reviewedBy}, reviewed_at = CURRENT_TIMESTAMP
+        WHERE code_group = #{codeGroup} AND code_field = #{codeField} AND code_before = #{codeBefore}
+    </update>
+
+    <select id="findMasterForUpdate" resultType="com.alin.lin.entity.PolicyContract">
         SELECT *
-        FROM main_policy_master
+        FROM policy_contract
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
         FOR UPDATE
     </select>
 
-    <select id="findAddress" resultType="com.alin.lin.entity.MainPolicyAddress">
+    <select id="findAddress" resultType="com.alin.lin.entity.PolicyContact">
         SELECT *
-        FROM main_policy_address
+        FROM policy_contact_address
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-          AND address_type = #{addressType}
+          AND address_type_code = #{addressTypeCode}
+          AND active_flag = 'Y'
     </select>
 
-    <select id="findAddressForUpdate" resultType="com.alin.lin.entity.MainPolicyAddress">
+    <insert id="insertPolicyAddress" parameterType="com.alin.lin.entity.PolicyContact">
+        INSERT INTO policy_contact_address
+            (address_id, policy_no, policy_seq, address_type_code, postal_code, address_text, country_code, primary_flag,
+             active_flag, review_status, created_by, created_at, updated_at, record_version)
+        VALUES (#{addressId}, #{policyNo}, #{policySeq}, #{addressTypeCode}, #{postalCode}, #{addressText},
+                COALESCE(#{countryCode}, 'TW'), COALESCE(#{primaryFlag}, 'N'),
+                'Y', #{reviewStatus}, #{createdBy}, #{createdAt}, #{createdAt}, 0)
+    </insert>
+    <update id="updatePolicyAddress" parameterType="com.alin.lin.entity.PolicyContact">
+        UPDATE policy_contact_address SET postal_code=#{postalCode}, address_text=#{addressText},
+            country_code=COALESCE(#{countryCode}, country_code),
+            primary_flag=COALESCE(#{primaryFlag}, primary_flag), active_flag=#{activeFlag},
+            review_status='P', created_by=#{createdBy}, created_at=#{createdAt}, updated_by=#{updatedBy},
+            updated_at=#{updatedAt}, reviewed_by=#{reviewedBy}, reviewed_at=#{reviewedAt}
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND address_type_code=#{addressTypeCode} AND active_flag='Y'
+    </update>
+    <update id="deletePolicyAddress">
+        UPDATE policy_contact_address SET active_flag='N', review_status='P', updated_by=#{updatedBy}, updated_at=CURRENT_TIMESTAMP
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND address_type_code=#{addressTypeCode} AND active_flag='Y'
+    </update>
+    <update id="updatePolicyAddressReviewDecision">
+        UPDATE policy_contact_address SET review_status=#{status}, reviewed_by=#{reviewedBy}, reviewed_at=CURRENT_TIMESTAMP
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND address_type_code=#{addressTypeCode}
+    </update>
+
+    <select id="findAddressForUpdate" resultType="com.alin.lin.entity.PolicyContact">
         SELECT *
-        FROM main_policy_address
+        FROM policy_contact_address
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-          AND address_type = #{addressType}
+          AND address_type_code = #{addressTypeCode}
         FOR UPDATE
     </select>
 
-    <select id="findAddresses" resultType="com.alin.lin.entity.MainPolicyAddress">
+    <select id="findAddresses" resultType="com.alin.lin.entity.PolicyContact">
         SELECT *
-        FROM main_policy_address
+        FROM policy_contact_address
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-        ORDER BY address_type
+          AND active_flag = 'Y'
+        ORDER BY address_type_code
     </select>
 
-    <select id="findRides" resultType="com.alin.lin.entity.MainPolicyRide">
+    <select id="findEmails" resultType="com.alin.lin.entity.PolicyEmail">
+        SELECT * FROM policy_contact_email
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND active_flag='Y'
+        ORDER BY primary_flag DESC, email_id
+    </select>
+    <select id="findPhones" resultType="com.alin.lin.entity.PolicyPhone">
+        SELECT * FROM policy_contact_phone
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND active_flag='Y'
+        ORDER BY primary_flag DESC, phone_id
+    </select>
+    <select id="findEmail" resultType="com.alin.lin.entity.PolicyEmail">
+        SELECT * FROM policy_contact_email
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND email_id=#{contactId} AND active_flag='Y'
+    </select>
+    <select id="findPhone" resultType="com.alin.lin.entity.PolicyPhone">
+        SELECT * FROM policy_contact_phone
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND phone_id=#{contactId} AND active_flag='Y'
+    </select>
+    <update id="updateEmailValue">
+        UPDATE policy_contact_email
+        SET email_address=#{afterValue}, updated_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE email_id=#{contactId} AND email_address=#{beforeValue} AND active_flag='Y'
+    </update>
+    <update id="updatePhoneValue">
+        UPDATE policy_contact_phone
+        SET phone_number=#{afterValue}, updated_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE phone_id=#{contactId} AND phone_number=#{beforeValue} AND active_flag='Y'
+    </update>
+    <insert id="insertEmailValue">
+        INSERT INTO policy_contact_email (
+            email_id, policy_no, policy_seq, email_type_code, email_address,
+            primary_flag, active_flag, review_status
+        ) VALUES (
+            #{contactId}, #{policyNo}, #{policySeq}, '01', #{afterValue},
+            'N', 'Y', 'S'
+        )
+    </insert>
+    <insert id="insertPhoneValue">
+        INSERT INTO policy_contact_phone (
+            phone_id, policy_no, policy_seq, phone_type_code, phone_number,
+            primary_flag, active_flag, review_status
+        ) VALUES (
+            #{contactId}, #{policyNo}, #{policySeq}, #{phoneTypeCode}, #{afterValue},
+            'N', 'Y', 'S'
+        )
+    </insert>
+
+    <select id="findRides" resultType="com.alin.lin.entity.PolicyCoverage">
         SELECT *
-        FROM main_policy_ride
+        FROM policy_coverage
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-        ORDER BY ride_order
+          AND active_flag = 'Y'
+        ORDER BY coverage_item_seq
+    </select>
+    <select id="findRide" resultType="com.alin.lin.entity.PolicyCoverage">
+        SELECT * FROM policy_coverage
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND coverage_item_seq=#{coverageItemSeq} AND active_flag='Y'
+    </select>
+    <select id="findRideForUpdate" resultType="com.alin.lin.entity.PolicyCoverage">
+        SELECT * FROM policy_coverage
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND coverage_item_seq=#{coverageItemSeq}
+        FOR UPDATE
     </select>
 
-    <select id="findRidesForUpdate" resultType="com.alin.lin.entity.MainPolicyRide">
+    <insert id="insertPolicyRide" parameterType="com.alin.lin.entity.PolicyCoverage">
+        INSERT INTO policy_coverage
+            (coverage_id, policy_no, policy_seq, coverage_item_type, coverage_item_seq, product_code, product_version, coverage_term_years, insured_amount, premium_amount, currency_code,
+             product_name, base_plan_product_code, payment_frequency_code, premium_payment_term_years,
+             coverage_term_type, effective_date, expiry_date,
+             active_flag, review_status, created_by, created_at, updated_at, record_version)
+        VALUES (#{coverageId}, #{policyNo}, #{policySeq}, #{coverageItemType}, #{coverageItemSeq}, #{productCode}, #{productVersion}, #{coverageTermYears},
+                #{insuredAmount}, #{premiumAmount}, #{currencyCode}, #{productName}, #{basePlanProductCode},
+                #{paymentFrequencyCode}, #{premiumPaymentTermYears}, #{coverageTermType}, #{effectiveDate}, #{expiryDate},
+                'Y', #{reviewStatus}, #{createdBy}, #{createdAt}, #{createdAt}, 0)
+    </insert>
+    <update id="updatePolicyRide" parameterType="com.alin.lin.entity.PolicyCoverage">
+        UPDATE policy_coverage SET coverage_item_type=#{coverageItemType}, product_code=#{productCode},
+            product_version=#{productVersion}, product_name=#{productName},
+            base_plan_product_code=#{basePlanProductCode}, coverage_term_years=#{coverageTermYears},
+            insured_amount=#{insuredAmount}, premium_amount=#{premiumAmount}, currency_code=#{currencyCode},
+            payment_frequency_code=#{paymentFrequencyCode}, premium_payment_term_years=#{premiumPaymentTermYears},
+            coverage_term_type=#{coverageTermType}, effective_date=#{effectiveDate}, expiry_date=#{expiryDate},
+            active_flag=#{activeFlag}, review_status='P',
+            created_by=#{createdBy}, created_at=#{createdAt}, updated_by=#{updatedBy}, updated_at=#{updatedAt},
+            reviewed_by=#{reviewedBy}, reviewed_at=#{reviewedAt}
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND coverage_item_seq=#{coverageItemSeq} AND active_flag='Y'
+    </update>
+    <update id="deletePolicyRide">
+        UPDATE policy_coverage SET active_flag='N', review_status='P', updated_by=#{updatedBy}, updated_at=CURRENT_TIMESTAMP
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND coverage_item_seq=#{coverageItemSeq} AND active_flag='Y'
+    </update>
+    <update id="updatePolicyRideReviewDecision">
+        UPDATE policy_coverage SET review_status=#{status}, reviewed_by=#{reviewedBy}, reviewed_at=CURRENT_TIMESTAMP
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND coverage_item_seq=#{coverageItemSeq}
+    </update>
+
+    <select id="findRidesForUpdate" resultType="com.alin.lin.entity.PolicyCoverage">
         SELECT *
-        FROM main_policy_ride
+        FROM policy_coverage
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-        ORDER BY ride_order
+        ORDER BY coverage_item_seq
         FOR UPDATE
     </select>
 
@@ -65,37 +245,290 @@
                code_field,
                code_before,
                code_after,
-               code_description
-        FROM code_description
+               code_description,
+               active_flag,
+               review_status,
+               created_by,
+               created_at,
+               updated_by,
+               updated_at,
+               reviewed_by,
+               reviewed_at,
+               record_version
+        FROM code_definition
         WHERE code_group = #{codeGroup}
           AND code_field = #{codeField}
         ORDER BY code_before
     </select>
 
     <select id="findCodesByGroup" resultType="com.alin.lin.entity.CodeDescription">
-        SELECT code_group,
-               code_field,
-               code_before,
-               code_after,
-               code_description
-        FROM code_description
+        SELECT code_group AS codeGroup,
+               code_field AS codeField,
+               code_before AS codeBefore,
+               code_after AS codeAfter,
+               code_description AS codeDescription
+        FROM code_definition
         WHERE code_group = #{codeGroup}
+          AND active_flag = 'Y'
+          AND review_status = 'S'
+        ORDER BY code_field, code_before
+    </select>
+
+    <select id="findUiFieldDefinitions" resultType="com.alin.lin.entity.CodeDescription">
+        SELECT code_group AS codeGroup,
+               code_field AS codeField,
+               code_before AS codeBefore,
+               code_after AS codeAfter,
+               code_description AS codeDescription
+        FROM code_definition
+        WHERE code_group = #{codeGroup}
+          AND active_flag = 'Y'
+          AND review_status = 'S'
         ORDER BY code_field
     </select>
 
     <select id="findAllCodes" resultType="com.alin.lin.entity.CodeDescription">
-        SELECT code_group, code_field, code_before, code_after, code_description
-        FROM code_description
+        SELECT code_group AS codeGroup,
+               code_field AS codeField,
+               code_before AS codeBefore,
+               code_after AS codeAfter,
+               code_description AS codeDescription, active_flag AS activeFlag,
+               created_by AS createdBy, created_at AS createdAt, updated_by AS updatedBy, updated_at AS updatedAt,
+               review_status AS reviewStatus,
+               reviewed_by AS reviewedBy, reviewed_at AS reviewedAt, record_version AS recordVersion
+        FROM code_definition
+        WHERE active_flag = 'Y'
         ORDER BY code_group, code_field, code_before
     </select>
+
+    <insert id="insertCode" parameterType="com.alin.lin.entity.CodeDescription">
+        INSERT INTO code_definition (code_definition_id, code_group, code_field, code_before, code_after, code_description, active_flag,
+                                     review_status, created_by, created_at, record_version)
+        VALUES (#{codeDefinitionId}, #{codeGroup}, #{codeField}, #{codeBefore}, #{codeAfter}, #{codeDescription}, 'Y',
+                #{reviewStatus}, #{createdBy}, #{createdAt}, 0)
+    </insert>
+
+    <update id="updateCode" parameterType="com.alin.lin.dto.CodeDescriptionCreateRequest">
+        UPDATE code_definition
+        SET code_before = #{codeBefore},
+            code_after = #{codeAfter},
+            code_description = #{codeDescription},
+            active_flag = COALESCE(#{activeFlag}, active_flag),
+            review_status = COALESCE(#{reviewStatus}, review_status),
+            created_by = #{createdBy},
+            created_at = #{createdAt},
+            updated_by = #{updatedBy},
+            updated_at = #{updatedAt},
+            reviewed_by = #{reviewedBy},
+            reviewed_at = #{reviewedAt}
+        WHERE code_group = #{originalCodeGroup} AND code_field = #{originalCodeField} AND code_before = #{originalCodeBefore}
+    </update>
+
+    <update id="deleteCode">
+        UPDATE code_definition SET active_flag = 'N', updated_by = #{updatedBy}, updated_at = CURRENT_TIMESTAMP
+        WHERE code_group = #{codeGroup} AND code_field = #{codeField} AND code_before = #{codeBefore}
+    </update>
+
+    <update id="reviewCode">
+        UPDATE code_definition
+        SET review_status = 'S', reviewed_by = #{reviewedBy}, reviewed_at = CURRENT_TIMESTAMP
+        WHERE code_group = #{codeGroup} AND code_field = #{codeField} AND code_before = #{codeBefore}
+    </update>
+
+    <insert id="insertChangeReview" parameterType="com.alin.lin.entity.ChangeReview"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO change_review (
+            review_uuid, operation, workflow_mode, source_type, source_record_type, source_record_id,
+            function_code, key1, unique_key, review_key, policy_no, policy_seq,
+            change_case_no, content_before, content_after, review_status,
+            created_by, created_at
+        ) VALUES (
+            #{reviewUuid}, #{operation}, #{workflowMode}, #{sourceType}, #{sourceRecordType}, #{sourceRecordId},
+            #{functionCode}, #{key1}, #{uniqueKey}, #{reviewKey}, #{policyNo}, #{policySeq},
+            #{changeCaseNo}, #{contentBefore}, #{contentAfter}, 'P',
+            #{createdBy}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="acquirePendingReviewLock">
+        INSERT INTO change_review_pending_lock (function_code, unique_key, review_key, created_by)
+        VALUES (#{functionCode}, #{uniqueKey}, #{reviewKey}, #{createdBy})
+    </insert>
+
+    <delete id="releasePendingReviewLock">
+        DELETE FROM change_review_pending_lock
+        WHERE review_key = #{reviewKey}
+    </delete>
+
+    <select id="findChangeReviewForUpdate" resultType="com.alin.lin.entity.ChangeReview">
+        SELECT *
+        FROM change_review
+        WHERE review_key = #{reviewKey}
+        FOR UPDATE
+    </select>
+
+    <select id="findPendingChangeReviewForUpdate" resultType="com.alin.lin.entity.ChangeReview">
+        SELECT *
+        FROM change_review
+        WHERE function_code = #{functionCode}
+          AND unique_key = #{uniqueKey}
+          AND review_status = 'P'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <insert id="insertChangeReviewAudit" parameterType="com.alin.lin.entity.ChangeReviewAudit">
+        INSERT INTO change_review_audit (
+            event_id, review_id, review_key, function_code, action,
+            status_before, status_after, operator_id, review_remark,
+            content_before, content_after, request_id, trace_id, occurred_at
+        ) VALUES (
+            #{eventId}, #{reviewId}, #{reviewKey}, #{functionCode}, #{action},
+            #{statusBefore}, #{statusAfter}, #{operatorId}, #{reviewRemark},
+            #{contentBefore}, #{contentAfter}, #{requestId}, #{traceId}, #{occurredAt}
+        )
+    </insert>
+
+    <select id="findChangeReviewAudits" resultType="com.alin.lin.entity.ChangeReviewAudit">
+        SELECT *
+        FROM change_review_audit
+        WHERE review_key = #{reviewKey}
+        ORDER BY occurred_at, audit_id
+    </select>
+
+    <select id="findChangeReviews" resultType="com.alin.lin.entity.ChangeReview">
+        SELECT * FROM change_review
+        WHERE (#{functionCode} IS NULL OR #{functionCode} = '' OR function_code = #{functionCode})
+          AND (#{reviewStatus} IS NULL OR #{reviewStatus} = '' OR review_status = #{reviewStatus})
+          AND (#{key1} IS NULL OR #{key1} = ''
+            OR policy_no LIKE CONCAT('%', #{key1}, '%')
+            OR change_case_no LIKE CONCAT('%', #{key1}, '%')
+            OR unique_key LIKE CONCAT('%', #{key1}, '%')
+            OR key1 LIKE CONCAT('%', #{key1}, '%'))
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countChangeReviews" resultType="long">
+        SELECT COUNT(*)
+        FROM change_review
+        WHERE (#{functionCode} IS NULL OR #{functionCode} = '' OR function_code = #{functionCode})
+          AND (#{reviewStatus} IS NULL OR #{reviewStatus} = '' OR review_status = #{reviewStatus})
+          AND (#{key1} IS NULL OR #{key1} = ''
+            OR policy_no LIKE CONCAT('%', #{key1}, '%')
+            OR change_case_no LIKE CONCAT('%', #{key1}, '%')
+            OR unique_key LIKE CONCAT('%', #{key1}, '%')
+            OR key1 LIKE CONCAT('%', #{key1}, '%'))
+    </select>
+
+    <update id="updateChangeReviewStatus">
+        UPDATE change_review
+        SET review_status = #{status},
+            review_remark = #{reviewRemark},
+            reviewed_by = #{reviewedBy},
+            reviewed_at = CURRENT_TIMESTAMP,
+            updated_by = #{reviewedBy},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE review_key = #{reviewKey}
+          AND review_status = 'P'
+    </update>
+
+    <update id="applyPolicyContractUpdate">
+        UPDATE policy_contract
+        SET premium_amount=#{value.premiumAmount}, currency_code=#{value.currencyCode},
+            policy_status=#{value.policyStatus}, contract_date=#{value.contractDate},
+            effective_date=#{value.effectiveDate}, maturity_date=#{value.maturityDate},
+            premium_payment_term_years=#{value.premiumPaymentTermYears},
+            coverage_term_years=#{value.coverageTermYears}, coverage_term_type=#{value.coverageTermType},
+            payment_frequency_code=#{value.paymentFrequencyCode}, product_code=#{value.productCode},
+            product_version=#{value.productVersion}, product_name=#{value.productName},
+            base_plan_product_code=#{value.basePlanProductCode}, application_no=#{value.applicationNo},
+            customer_code=#{value.customerCode}, insurance_agent_code=#{value.insuranceAgentCode},
+            active_flag=#{value.activeFlag}, review_status='S',
+            updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP, reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP,
+            record_version=record_version+1
+        WHERE policy_no=#{value.policyNo} AND policy_seq=#{value.policySeq} AND active_flag='Y'
+          AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyPolicyContractDelete">
+        UPDATE policy_contract
+        SET active_flag='N', review_status='S', updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP,
+            reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE policy_no=#{policyNo} AND policy_seq=#{policySeq} AND active_flag='Y'
+          AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyPolicyContactUpdate">
+        UPDATE policy_contact_address
+        SET postal_code=#{value.postalCode}, address_text=#{value.addressText},
+            country_code=#{value.countryCode}, primary_flag=#{value.primaryFlag},
+            active_flag=#{value.activeFlag}, review_status='S',
+            updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP, reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP,
+            record_version=record_version+1
+        WHERE policy_no=#{value.policyNo} AND policy_seq=#{value.policySeq}
+          AND address_type_code=#{value.addressTypeCode} AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyPolicyContactDelete">
+        UPDATE policy_contact_address
+        SET active_flag='N', review_status='S', updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP,
+            reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE policy_no=#{value.policyNo} AND policy_seq=#{value.policySeq}
+          AND address_type_code=#{value.addressTypeCode} AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyPolicyCoverageUpdate">
+        UPDATE policy_coverage
+        SET coverage_item_type=#{value.coverageItemType}, product_code=#{value.productCode}, product_version=#{value.productVersion},
+            coverage_term_years=#{value.coverageTermYears}, insured_amount=#{value.insuredAmount},
+            premium_amount=#{value.premiumAmount}, currency_code=#{value.currencyCode},
+            product_name=#{value.productName}, base_plan_product_code=#{value.basePlanProductCode},
+            payment_frequency_code=#{value.paymentFrequencyCode},
+            premium_payment_term_years=#{value.premiumPaymentTermYears},
+            coverage_term_type=#{value.coverageTermType}, effective_date=#{value.effectiveDate},
+            expiry_date=#{value.expiryDate}, active_flag=#{value.activeFlag}, review_status='S',
+            updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP, reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP,
+            record_version=record_version+1
+        WHERE policy_no=#{value.policyNo} AND policy_seq=#{value.policySeq}
+          AND coverage_item_seq=#{value.coverageItemSeq} AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyPolicyCoverageDelete">
+        UPDATE policy_coverage
+        SET active_flag='N', review_status='S', updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP,
+            reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE policy_no=#{value.policyNo} AND policy_seq=#{value.policySeq}
+          AND coverage_item_seq=#{value.coverageItemSeq} AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyCodeDefinitionUpdate">
+        UPDATE code_definition
+        SET code_before=#{value.codeBefore}, code_after=#{value.codeAfter}, code_description=#{value.codeDescription}, active_flag=#{value.activeFlag},
+            review_status='S', updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP,
+            reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE code_group=#{before.codeGroup} AND code_field=#{before.codeField} AND code_before=#{before.codeBefore}
+          AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
+    <update id="applyCodeDefinitionDelete">
+        UPDATE code_definition
+        SET active_flag='N', review_status='S', updated_by=#{operatorId}, updated_at=CURRENT_TIMESTAMP,
+            reviewed_by=#{operatorId}, reviewed_at=CURRENT_TIMESTAMP, record_version=record_version+1
+        WHERE code_group=#{value.codeGroup} AND code_field=#{value.codeField} AND code_before=#{value.codeBefore}
+          AND active_flag='Y' AND record_version=#{expectedVersion}
+    </update>
 
     <select id="findCode" resultType="com.alin.lin.entity.CodeDescription">
         SELECT code_group,
                code_field,
                code_before,
                code_after,
-               code_description
-        FROM code_description
+               code_description,
+               active_flag,
+               review_status,
+               created_by,
+               created_at,
+               updated_by,
+               updated_at,
+               reviewed_by,
+               reviewed_at,
+               record_version
+        FROM code_definition
         WHERE code_group = #{codeGroup}
           AND code_field = #{codeField}
           AND code_before = #{codeBefore}
@@ -109,8 +542,8 @@
     </insert>
 
     <insert id="insertCaseReservationItem">
-        INSERT INTO policy_change_case_reservation_item (change_case_no, change_item)
-        VALUES (#{changeCaseNo}, #{changeItem})
+        INSERT INTO policy_change_case_reservation_item (change_case_no, change_item_code)
+        VALUES (#{changeCaseNo}, #{changeItemCode})
     </insert>
 
     <select id="findLastInsertedSequence" resultType="long">
@@ -118,10 +551,10 @@
     </select>
 
     <select id="findReservedChangeItems" resultType="string">
-        SELECT change_item
+        SELECT change_item_code
         FROM policy_change_case_reservation_item
         WHERE change_case_no = #{changeCaseNo}
-        ORDER BY change_item
+        ORDER BY change_item_code
     </select>
 
     <insert id="insertCaseReservation">
@@ -163,8 +596,11 @@
           AND expires_at &gt; CURRENT_TIMESTAMP
     </update>
 
-    <select id="findChangeCases" resultType="com.alin.lin.dto.PolicyChangeCaseDto">
-        SELECT a.policy_no,
+    <!-- 共用欄位清單與 JOIN：供 findChangeCases / findChangeCase 使用。
+         findLatestChangeCaseByItem 的 JOIN 順序與欄位不同，不使用此 fragment。 -->
+    <sql id="changeCaseSelectAndJoin">
+        SELECT a.change_case_id,
+               a.policy_no,
                a.policy_seq,
                a.change_case_no,
                a.acceptance_status,
@@ -175,10 +611,10 @@
                a.updated_at,
                a.reviewed_by,
                a.reviewed_at,
-               GROUP_CONCAT(DISTINCT i.change_item ORDER BY i.change_item SEPARATOR ',') AS change_items,
-               GROUP_CONCAT(DISTINCT COALESCE(cd.code_description, i.change_item) ORDER BY i.change_item SEPARATOR ',') AS change_item_descriptions
+               GROUP_CONCAT(DISTINCT i.change_item_code ORDER BY i.change_item_code SEPARATOR ',') AS change_item_code_codes,
+               GROUP_CONCAT(DISTINCT COALESCE(cd.code_description, i.change_item_code) ORDER BY i.change_item_code SEPARATOR ',') AS change_item_code_descriptions
         FROM policy_change_acceptance a
-        LEFT JOIN code_description status_cd
+        LEFT JOIN code_definition status_cd
           ON status_cd.code_group = 'policy-change-acceptance'
          AND status_cd.code_field = 'acceptance_status'
          AND status_cd.code_before = a.acceptance_status
@@ -186,55 +622,37 @@
           ON i.policy_no = a.policy_no
          AND i.policy_seq = a.policy_seq
          AND i.change_case_no = a.change_case_no
-        LEFT JOIN code_description cd
+        LEFT JOIN code_definition cd
           ON cd.code_group = 'policy-change-item'
-         AND cd.code_field = 'change_item'
-         AND cd.code_before = i.change_item
-        WHERE a.policy_no = #{policyNo}
-        GROUP BY a.policy_no, a.policy_seq, a.change_case_no, a.acceptance_status,
+         AND cd.code_field = 'change_item_code'
+         AND cd.code_before = i.change_item_code
+    </sql>
+
+    <sql id="changeCaseGroupBy">
+        GROUP BY a.change_case_id, a.policy_no, a.policy_seq, a.change_case_no, a.acceptance_status,
                  status_cd.code_description, a.created_by, a.created_at, a.updated_by, a.updated_at,
                  a.reviewed_by, a.reviewed_at
+    </sql>
+
+    <select id="findChangeCases" resultType="com.alin.lin.dto.PolicyChangeCaseDto">
+        <include refid="changeCaseSelectAndJoin"/>
+        WHERE a.policy_no = #{policyNo}
+        <include refid="changeCaseGroupBy"/>
         ORDER BY a.created_at DESC
     </select>
 
     <select id="findChangeCase" resultType="com.alin.lin.dto.PolicyChangeCaseDto">
-        SELECT a.policy_no,
-               a.policy_seq,
-               a.change_case_no,
-               a.acceptance_status,
-               COALESCE(status_cd.code_description, a.acceptance_status) AS acceptance_status_description,
-               a.created_by,
-               a.created_at,
-               a.updated_by,
-               a.updated_at,
-               a.reviewed_by,
-               a.reviewed_at,
-               GROUP_CONCAT(DISTINCT i.change_item ORDER BY i.change_item SEPARATOR ',') AS change_items,
-               GROUP_CONCAT(DISTINCT COALESCE(cd.code_description, i.change_item) ORDER BY i.change_item SEPARATOR ',') AS change_item_descriptions
-        FROM policy_change_acceptance a
-        LEFT JOIN code_description status_cd
-          ON status_cd.code_group = 'policy-change-acceptance'
-         AND status_cd.code_field = 'acceptance_status'
-         AND status_cd.code_before = a.acceptance_status
-        LEFT JOIN policy_change_item i
-          ON i.policy_no = a.policy_no
-         AND i.policy_seq = a.policy_seq
-         AND i.change_case_no = a.change_case_no
-        LEFT JOIN code_description cd
-          ON cd.code_group = 'policy-change-item'
-         AND cd.code_field = 'change_item'
-         AND cd.code_before = i.change_item
+        <include refid="changeCaseSelectAndJoin"/>
         WHERE a.policy_no = #{policyNo}
           AND a.policy_seq = #{policySeq}
           AND a.change_case_no = #{changeCaseNo}
-        GROUP BY a.policy_no, a.policy_seq, a.change_case_no, a.acceptance_status,
-                 status_cd.code_description, a.created_by, a.created_at, a.updated_by, a.updated_at,
-                 a.reviewed_by, a.reviewed_at
+        <include refid="changeCaseGroupBy"/>
     </select>
 
     <!-- 申請資格檢核：同保單、序號及保全變更項目的最近一筆受理案件。 -->
     <select id="findLatestChangeCaseByItem" resultType="com.alin.lin.dto.PolicyChangeCaseDto">
-        SELECT a.policy_no,
+        SELECT a.change_case_id,
+               a.policy_no,
                a.policy_seq,
                a.change_case_no,
                a.acceptance_status,
@@ -245,24 +663,24 @@
                a.updated_at,
                a.reviewed_by,
                a.reviewed_at,
-               i.change_item AS change_items,
-               COALESCE(item_cd.code_description, i.change_item) AS change_item_descriptions
+               i.change_item_code AS change_item_code_codes,
+               COALESCE(item_cd.code_description, i.change_item_code) AS change_item_code_descriptions
         FROM policy_change_acceptance a
         JOIN policy_change_item i
           ON i.policy_no = a.policy_no
          AND i.policy_seq = a.policy_seq
          AND i.change_case_no = a.change_case_no
-        LEFT JOIN code_description status_cd
+        LEFT JOIN code_definition status_cd
           ON status_cd.code_group = 'policy-change-acceptance'
          AND status_cd.code_field = 'acceptance_status'
          AND status_cd.code_before = a.acceptance_status
-        LEFT JOIN code_description item_cd
+        LEFT JOIN code_definition item_cd
           ON item_cd.code_group = 'policy-change-item'
-         AND item_cd.code_field = 'change_item'
-         AND item_cd.code_before = i.change_item
+         AND item_cd.code_field = 'change_item_code'
+         AND item_cd.code_before = i.change_item_code
         WHERE a.policy_no = #{policyNo}
           AND a.policy_seq = #{policySeq}
-          AND i.change_item = #{changeItem}
+          AND i.change_item_code = #{changeItemCode}
         ORDER BY a.created_at DESC, a.change_case_no DESC
         LIMIT 1
     </select>
@@ -286,42 +704,44 @@
     </select>
 
     <select id="findChangeItemsByCaseNo" resultType="string">
-        SELECT change_item
+        SELECT change_item_code
         FROM policy_change_item
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-        ORDER BY change_item
+        ORDER BY change_item_code
     </select>
 
     <select id="findChangeFilesByItem" resultType="com.alin.lin.entity.PolicyChangeFile">
         SELECT id,
+               change_snapshot_id,
                policy_no,
                policy_seq,
                change_case_no,
-               change_item,
-               change_file,
-               change_key,
+               change_item_code,
+               changed_record_type,
+               changed_record_key,
                content_before,
                content_after,
                created_at,
                updated_at
-        FROM policy_change_file
+        FROM policy_change_record_snapshot
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
-        ORDER BY change_key, id
+          AND change_item_code = #{changeItemCode}
+        ORDER BY changed_record_key, id
     </select>
 
     <select id="findChangeFieldsByItem" resultType="com.alin.lin.entity.PolicyChangeField">
         SELECT id,
+               change_field_id,
                policy_no,
                policy_seq,
                change_case_no,
-               change_item,
-               change_field,
-               change_key,
+               change_item_code,
+               changed_field_name,
+               changed_record_key,
                content_before,
                content_after,
                created_at,
@@ -330,7 +750,7 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
         ORDER BY id
     </select>
 
@@ -339,18 +759,18 @@
                policy_no,
                policy_seq,
                change_case_no,
-               change_item,
-               change_file,
-               change_key,
+               change_item_code,
+               changed_record_type,
+               changed_record_key,
                content_before,
                content_after,
                created_at,
                updated_at
-        FROM policy_change_file
+        FROM policy_change_record_snapshot
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-        ORDER BY change_item, change_file, change_key, id
+        ORDER BY change_item_code, changed_record_type, changed_record_key, id
     </select>
 
     <select id="findChangeFieldsByCaseNo" resultType="com.alin.lin.entity.PolicyChangeField">
@@ -358,9 +778,9 @@
                policy_no,
                policy_seq,
                change_case_no,
-               change_item,
-               change_field,
-               change_key,
+               change_item_code,
+               changed_field_name,
+               changed_record_key,
                content_before,
                content_after,
                created_at,
@@ -369,23 +789,24 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-        ORDER BY change_item, change_key, change_field, id
+        ORDER BY change_item_code, changed_record_key, changed_field_name, id
     </select>
 
     <insert id="insertAcceptance">
         INSERT INTO policy_change_acceptance (
+            change_case_id,
             policy_no,
             policy_seq,
             change_case_no,
             acceptance_status,
             created_by
         )
-        VALUES (#{policyNo}, #{policySeq}, #{changeCaseNo}, #{acceptanceStatus}, #{createdBy})
+        VALUES (#{changeCaseId}, #{policyNo}, #{policySeq}, #{changeCaseNo}, #{acceptanceStatus}, #{createdBy})
     </insert>
 
     <insert id="insertChangeItem">
-        INSERT INTO policy_change_item (policy_no, policy_seq, change_case_no, change_item)
-        VALUES (#{policyNo}, #{policySeq}, #{changeCaseNo}, #{changeItem})
+        INSERT INTO policy_change_item (change_item_id, policy_no, policy_seq, change_case_no, change_item_code)
+        VALUES (#{changeItemId}, #{policyNo}, #{policySeq}, #{changeCaseNo}, #{changeItemCode})
     </insert>
 
     <select id="existsChangeItem" resultType="int">
@@ -394,27 +815,29 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
     </select>
 
     <insert id="upsertChangeField">
         INSERT INTO policy_change_field (
+            change_field_id,
             policy_no,
             policy_seq,
             change_case_no,
-            change_item,
-            change_field,
-            change_key,
+            change_item_code,
+            changed_field_name,
+            changed_record_key,
             content_before,
             content_after
         )
         VALUES (
+            #{changeFieldId},
             #{policyNo},
             #{policySeq},
             #{changeCaseNo},
-            #{changeItem},
-            #{changeField},
-            #{changeKey},
+            #{changeItemCode},
+            #{changedFieldName},
+            #{changedRecordKey},
             #{contentBefore},
             #{contentAfter}
         )
@@ -425,23 +848,25 @@
     </insert>
 
     <insert id="upsertChangeFile">
-        INSERT INTO policy_change_file (
+        INSERT INTO policy_change_record_snapshot (
+            change_snapshot_id,
             policy_no,
             policy_seq,
             change_case_no,
-            change_item,
-            change_file,
-            change_key,
+            change_item_code,
+            changed_record_type,
+            changed_record_key,
             content_before,
             content_after
         )
         VALUES (
+            #{changeSnapshotId},
             #{policyNo},
             #{policySeq},
             #{changeCaseNo},
-            #{changeItem},
-            #{changeFile},
-            #{changeKey},
+            #{changeItemCode},
+            #{changedRecordType},
+            #{changedRecordKey},
             #{contentBefore},
             #{contentAfter}
         )
@@ -456,7 +881,7 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
     </delete>
 
     <delete id="deleteChangeFieldsByItemAndKey">
@@ -464,18 +889,18 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
-          AND change_key = #{changeKey}
+          AND change_item_code = #{changeItemCode}
+          AND changed_record_key = #{changedRecordKey}
     </delete>
 
     <delete id="deleteChangeFileByItemAndKey">
-        DELETE FROM policy_change_file
+        DELETE FROM policy_change_record_snapshot
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
-          AND change_file = #{changeFile}
-          AND change_key = #{changeKey}
+          AND change_item_code = #{changeItemCode}
+          AND changed_record_type = #{changedRecordType}
+          AND changed_record_key = #{changedRecordKey}
     </delete>
 
     <select id="countChangeFieldsByItem" resultType="int">
@@ -484,16 +909,16 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
     </select>
 
     <select id="countChangeFilesByItem" resultType="int">
         SELECT COUNT(*)
-        FROM policy_change_file
+        FROM policy_change_record_snapshot
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
     </select>
 
     <delete id="deleteChangeItem">
@@ -501,7 +926,7 @@
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
           AND change_case_no = #{changeCaseNo}
-          AND change_item = #{changeItem}
+          AND change_item_code = #{changeItemCode}
     </delete>
 
     <select id="countChangeItemsByCaseNo" resultType="int">
@@ -534,37 +959,35 @@
     </update>
 
     <update id="updateAddress">
-        UPDATE main_policy_address
-        SET zip_code3 = #{zipCode3},
-            zip_code2 = #{zipCode2},
-            full_width_address = #{fullWidthAddress},
-            half_width_address = #{halfWidthAddress}
+        UPDATE policy_contact_address
+        SET postal_code = #{postalCode},
+            address_text = #{addressText}
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-          AND address_type = #{addressType}
+          AND address_type_code = #{addressTypeCode}
     </update>
 
     <update id="updateRideAmount">
-        UPDATE main_policy_ride
-        SET insured_amount = CAST(#{insuredAmount} AS DECIMAL(10, 2))
+        UPDATE policy_coverage
+        SET insured_amount = CAST(#{insuredAmount} AS DECIMAL(18, 2))
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-          AND ride_order = #{rideOrder}
+          AND coverage_item_seq = #{coverageItemSeq}
     </update>
 
     <update id="updateRidePremium">
-        UPDATE main_policy_ride
-        SET premium = CAST(#{premium} AS DECIMAL(17, 4))
+        UPDATE policy_coverage
+        SET premium_amount = CAST(#{premiumAmount} AS DECIMAL(18, 4))
         WHERE policy_no = #{policyNo}
           AND policy_seq = #{policySeq}
-          AND ride_order = #{rideOrder}
+          AND coverage_item_seq = #{coverageItemSeq}
     </update>
 
     <update id="updateMasterTotalPremiumFromRides">
-        UPDATE main_policy_master
-        SET premium = (
-            SELECT COALESCE(SUM(ride.premium), 0)
-            FROM main_policy_ride ride
+        UPDATE policy_contract
+        SET premium_amount = (
+            SELECT COALESCE(SUM(ride.premium_amount), 0)
+            FROM policy_coverage ride
             WHERE ride.policy_no = #{policyNo}
               AND ride.policy_seq = #{policySeq}
         )

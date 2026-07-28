@@ -7,9 +7,9 @@ public enum PolicyRideKey {
     // 主約列
     MAIN("000");
 
-    private final String rideOrder;
+    private final String coverageItemSeq;
 
-    PolicyRideKey(String rideOrder) {
-        this.rideOrder = rideOrder;
+    PolicyRideKey(String coverageItemSeq) {
+        this.coverageItemSeq = coverageItemSeq;
     }
 }
