@@ -356,3 +356,11 @@ docker build -t pos-api:latest .
 - `GET /api/function-codes` 提供所有已登入角色讀取畫面功能代碼，供右上角功能標籤使用；前端不得另建完整功能代碼固定對照表。
 - `GET /api/navigation-labels` 只提供 `main-navigation/navigation_label`，`GET /api/field-labels` 只提供 `CHT-code`；兩者供一般已登入畫面讀取，不得綁定 `MCM00001`。Router 與表頭只保存英文 key，查無中文時回傳原 key。
 - 共用覆核資料必須保存 `source_record_type`、`source_record_id`，以便畫面由覆核資料回查原始異動欄位檔、異動檔案檔或代碼資料。
+### 動態欄位中文名稱
+
+- 清單與明細由 API 回傳物件的 key 動態展開，前端不得另建固定中文表頭。
+- 所有 API 欄位中文名稱集中建立於 `code_definition`：`code_group='CHT-code'`、`code_field=API key`、`code_before=中文名稱`。
+- 新增 DTO 欄位時必須在同一版 Flyway migration 補上 CHT-code；前端找不到對應時保留原始英文 key，方便辨識遺漏的 DD。
+- `acceptanceStatusDescription` 顯示為「保全受理狀態說明」，不可在 Vue 元件內寫死。
+- `V64__rebuild_canonical_cht_field_labels.sql` 是目前標準中文欄名基準；調整欄位 key 時必須同步更新此基準的後續 migration，不可在 Vue 另加別名。
+- 所有 API 清單共用 `ScrollableRecordTable`，欄寬由目前頁面表頭與實際資料內容的視覺長度計算；各頁不得再建立固定 Grid 欄寬或另一套表頭樣式。

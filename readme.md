@@ -356,8 +356,9 @@ mvn clean verify
 
 ### 前端共用表格
 
-- 查詢保單主檔、地址、主附約及代碼資料共用 `ScrollableRecordTable`。
-- 表頭與資料列使用同一組 Grid 欄寬及整表最小寬度；文字與數字均採左對齊，確保同欄上下位置一致。
+- 所有 API 清單（保單、地址、主附約、代碼、保全案件、覆核中心與使用者授權）共用 `ScrollableRecordTable`。
+- 表頭與資料列使用同一組 Grid 欄寬及整表最小寬度；欄寬由目前頁面的表頭與實際資料內容共同計算，並設定合理上下限。內容超過可視寬度時才顯示水平捲軸。
+- 文字與數字均採左對齊，確保同欄上下位置一致；各頁不得再建立自己的清單 Grid 或固定欄寬。
 
 ### 覆核中心篩選
 
@@ -434,3 +435,11 @@ API 與畫面功能代碼的對照維護於 `api-screen-authorization`：`code_f
 使用者授權與畫面授權查詢會在 Service 層統一處理資料庫時間型別。MyBatis／Connector/J 回傳 `LocalDateTime` 或 `java.sql.Timestamp` 都可正常轉成 API DTO，避免 Admin 開啟 `MUS00001` 時因驅動型別差異顯示「系統發生未預期錯誤」。
 
 V62 會移除舊版啟動腳本誤寫入的 `${POS_*_USERNAME}` placeholder 帳號及其角色、畫面授權；有效的 `admin`、`maker` 等 userId 不受影響。
+
+V63 補齊保全受理動態清單的 `acceptanceStatusDescription` 與
+`changeItemCodeCodes` 中文 DD。資料表與明細由 API key 動態展開，中文名稱統一查詢
+`CHT-code`；Vue 畫面不保留另一份固定欄位名稱。
+
+V64 會重建標準 `CHT-code` 中文欄名集合，統一 API DTO、覆核、授權、保單、
+聯絡方式、保障項目與稽核欄位的中文名稱。既有重複或不一致資料會先移除再以
+標準 key 寫回，避免同一英文欄位在不同畫面顯示不同中文。
