@@ -25,7 +25,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <tomcat.version>10.1.57</tomcat.version>
     <jackson-bom.version>2.21.5</jackson-bom.version>
-    <bouncycastle.version>1.78</bouncycastle.version>
+    <bouncycastle.version>1.85</bouncycastle.version>
   </properties>
 
   <dependencies>
