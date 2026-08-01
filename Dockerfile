@@ -9,7 +9,7 @@ COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -B -Dstyle.color=never
 
-FROM eclipse-temurin:17-jre-ubi10-minimal@sha256:f5d48f4d9d15ef5e60ebd12232698ad1f152bb24e2daa7453e4ff0de1341da8d
+FROM eclipse-temurin:24-jre-ubi10-minimal@sha256:3682dc9d9f189459f87975d11ac5cca3975d5ad7fbe311ad6b4cfad39444e07f
 
 WORKDIR /app
 
